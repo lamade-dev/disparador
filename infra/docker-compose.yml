@@ -1,0 +1,120 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: disparador_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: disparador
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: disparador
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U disparador"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres_evolution:
+    image: postgres:16-alpine
+    container_name: disparador_postgres_evolution
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: evolution
+    volumes:
+      - postgres_evolution_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: disparador_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  evolution:
+    image: atendai/evolution-api:v2.2.3
+    container_name: disparador_evolution
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_URL: ${EVOLUTION_SERVER_URL:-http://localhost:8080}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_PASSWORD}@postgres_evolution:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: evolution
+      QRCODE_LIMIT: 40
+      DEL_INSTANCE: "false"
+      LOG_LEVEL: ERROR
+      LOG_COLOR: "false"
+      INSTANCE_EXPIRATION_TIME: 0
+    depends_on:
+      postgres_evolution:
+        condition: service_healthy
+    volumes:
+      - evolution_data:/evolution/instances
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: disparador_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://disparador:${POSTGRES_PASSWORD}@postgres:5432/disparador
+      REDIS_URL: redis://redis:6379
+      EVOLUTION_URL: http://evolution:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      NODE_ENV: production
+      PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      evolution:
+        condition: service_started
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: disparador_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  postgres_evolution_data:
+  redis_data:
+  evolution_data:
+  uploads:

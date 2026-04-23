@@ -1,0 +1,162 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MASTER
+  GESTOR
+}
+
+enum InstanceStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  BLOCKED
+}
+
+enum CampaignStatus {
+  DRAFT
+  QUEUED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum ResponseSentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  password     String
+  role         Role       @default(GESTOR)
+  active       Boolean    @default(true)
+  createdById  String?
+  createdBy    User?      @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers User[]     @relation("UserCreatedBy")
+  instances    Instance[]
+  campaigns    Campaign[]
+  contactLists ContactList[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Instance {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String         @unique
+  displayName  String
+  phoneNumber  String?
+  status       InstanceStatus @default(DISCONNECTED)
+  campaigns    CampaignInstance[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ContactList {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName    String
+  totalRows   Int
+  validCount  Int        @default(0)
+  invalidCount Int       @default(0)
+  contacts    Contact[]
+  campaigns   Campaign[]
+  createdAt   DateTime   @default(now())
+}
+
+model Contact {
+  id            String      @id @default(cuid())
+  contactListId String
+  contactList   ContactList @relation(fields: [contactListId], references: [id], onDelete: Cascade)
+  rawPhone      String
+  phone         String
+  name          String?
+  extra         Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([phone])
+  @@index([contactListId])
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  name            String
+  contactListId   String
+  contactList     ContactList    @relation(fields: [contactListId], references: [id])
+  messageTemplate String
+  intervalMin     Int            @default(15)
+  intervalMax     Int            @default(45)
+  redirectNumber  String?
+  status          CampaignStatus @default(DRAFT)
+  instances       CampaignInstance[]
+  messages        Message[]
+  sentCount       Int            @default(0)
+  deliveredCount  Int            @default(0)
+  repliedCount    Int            @default(0)
+  positiveCount   Int            @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CampaignInstance {
+  campaignId  String
+  instanceId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  instance    Instance @relation(fields: [instanceId], references: [id])
+
+  @@id([campaignId, instanceId])
+}
+
+model Message {
+  id                String             @id @default(cuid())
+  campaignId        String
+  campaign          Campaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId         String
+  instanceId        String
+  phone             String
+  name              String?
+  sentText          String?
+  status            MessageStatus      @default(PENDING)
+  evolutionMsgId    String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  responseText      String?
+  responseSentiment ResponseSentiment?
+  responseAt        DateTime?
+  notifiedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([campaignId])
+  @@index([phone])
+  @@index([evolutionMsgId])
+  @@index([status])
+}
