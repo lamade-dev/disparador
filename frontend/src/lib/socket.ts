@@ -6,7 +6,7 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (!socket) {
     const user = useAuthStore.getState().user;
-    socket = io('/', {
+    socket = io(import.meta.env.VITE_API_URL ?? '/', {
       auth: { userId: user?.id },
       transports: ['websocket'],
     });
