@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, requireRole } from '../../middleware/auth';
 import {
   listInstances,
   createInstance,
@@ -11,7 +11,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requireRole('MASTER'));
 router.get('/', listInstances);
 router.post('/', createInstance);
 router.get('/:id/qrcode', getQrCode);

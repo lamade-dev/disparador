@@ -6,12 +6,29 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
     where: { id: campaignId },
     include: {
       contactList: { include: { contacts: true } },
-      instances: { include: { instance: true } },
     },
   });
 
-  const instances = campaign.instances.map((ci) => ci.instance);
-  if (instances.length === 0) throw new Error('Nenhuma instância selecionada');
+  const config = await prisma.dispatchConfig.findUnique({ where: { id: 'global' } });
+
+  let instances: Array<{ id: string; name: string }>;
+
+  if (!config || config.mode === 'ALL') {
+    instances = await prisma.instance.findMany({
+      where: { status: 'CONNECTED' },
+      select: { id: true, name: true },
+    });
+  } else {
+    if (!config.specificInstanceId) throw new Error('Nenhuma instância específica configurada');
+    const inst = await prisma.instance.findUnique({
+      where: { id: config.specificInstanceId },
+      select: { id: true, name: true },
+    });
+    if (!inst) throw new Error('Instância específica não encontrada');
+    instances = [inst];
+  }
+
+  if (instances.length === 0) throw new Error('Nenhuma instância conectada disponível. Conecte uma instância primeiro.');
 
   const contacts = campaign.contactList.contacts;
   if (contacts.length === 0) throw new Error('Nenhum contato na lista');

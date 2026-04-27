@@ -12,6 +12,7 @@ import contactsRouter from './modules/contacts/contacts.router';
 import campaignsRouter from './modules/campaigns/campaigns.router';
 import dashboardRouter from './modules/dashboard/dashboard.router';
 import webhooksRouter from './modules/webhooks/webhooks.router';
+import dispatchConfigRouter from './modules/dispatch-config/dispatch-config.router';
 import { startSendWorker } from './services/queue/workers/send.worker';
 import { startAnalysisWorker } from './services/queue/workers/analysis.worker';
 
@@ -47,6 +48,7 @@ app.use('/api/contacts', contactsRouter);
 app.use('/api/campaigns', campaignsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/dispatch-config', dispatchConfigRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

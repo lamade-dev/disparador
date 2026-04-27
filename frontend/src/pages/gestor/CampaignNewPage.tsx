@@ -4,50 +4,38 @@ import { ChevronRight, ChevronLeft, Loader2, CheckCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface ContactList { id: string; fileName: string; validCount: number; }
-interface Instance { id: string; displayName: string; status: string; phoneNumber: string | null; }
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3;
 
 export default function CampaignNewPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [lists, setLists] = useState<ContactList[]>([]);
-  const [instances, setInstances] = useState<Instance[]>([]);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
     contactListId: '',
     messageTemplate: '',
-    instanceIds: [] as string[],
     intervalMin: 15,
     intervalMax: 45,
     redirectNumber: '',
   });
 
   useEffect(() => {
-    Promise.all([api.get('/contacts'), api.get('/instances')]).then(([c, i]) => {
-      setLists(c.data);
-      setInstances(i.data.filter((inst: Instance) => inst.status === 'CONNECTED'));
-    });
+    api.get('/contacts').then((res) => setLists(res.data));
   }, []);
-
-  function toggleInstance(id: string) {
-    setForm((prev) => ({
-      ...prev,
-      instanceIds: prev.instanceIds.includes(id)
-        ? prev.instanceIds.filter((i) => i !== id)
-        : [...prev.instanceIds, id],
-    }));
-  }
 
   async function handleSubmit() {
     setSaving(true);
     try {
-      const res = await api.post('/campaigns', form);
-      navigate(`/campaigns/${res.data.id}`);
+      const res = await api.post('/campaigns', {
+        ...form,
+        redirectNumber: form.redirectNumber || undefined,
+      });
+      navigate(`/sessions/${res.data.id}`);
     } catch (err: any) {
-      alert(err.response?.data?.error ?? 'Erro ao criar campanha');
+      alert(err.response?.data?.error ?? 'Erro ao criar sessão');
     } finally {
       setSaving(false);
     }
@@ -56,22 +44,20 @@ export default function CampaignNewPage() {
   const canNext = () => {
     if (step === 1) return !!form.name && !!form.contactListId;
     if (step === 2) return form.messageTemplate.length >= 5;
-    if (step === 3) return form.instanceIds.length > 0;
     return true;
   };
 
   const steps = [
     { n: 1, label: 'Lista' },
     { n: 2, label: 'Mensagem' },
-    { n: 3, label: 'Instâncias' },
-    { n: 4, label: 'Configurações' },
+    { n: 3, label: 'Configurações' },
   ];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Nova Campanha</h1>
-        <p className="text-muted-foreground text-sm">Siga os passos para configurar sua campanha</p>
+        <h1 className="text-2xl font-bold">Nova Sessão</h1>
+        <p className="text-muted-foreground text-sm">Configure a sessão de disparo</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -90,7 +76,7 @@ export default function CampaignNewPage() {
         {step === 1 && (
           <>
             <div>
-              <label className="text-sm font-medium block mb-1.5">Nome da Campanha</label>
+              <label className="text-sm font-medium block mb-1.5">Nome da Sessão</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -123,8 +109,8 @@ export default function CampaignNewPage() {
 
         {step === 2 && (
           <div>
-            <label className="text-sm font-medium block mb-1.5">Mensagem da Campanha</label>
-            <p className="text-xs text-muted-foreground mb-3">Use {'{nome}'} e {'{telefone}'} para personalizar. A IA irá variar ligeiramente cada envio para evitar bloqueios.</p>
+            <label className="text-sm font-medium block mb-1.5">Mensagem da Sessão</label>
+            <p className="text-xs text-muted-foreground mb-3">Use {'{nome}'} e {'{telefone}'} para personalizar. A IA irá variar cada envio para evitar bloqueios.</p>
             <textarea
               value={form.messageTemplate}
               onChange={(e) => setForm((p) => ({ ...p, messageTemplate: e.target.value }))}
@@ -137,41 +123,6 @@ export default function CampaignNewPage() {
         )}
 
         {step === 3 && (
-          <div>
-            <label className="text-sm font-medium block mb-3">Instâncias para Envio</label>
-            {instances.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma instância conectada. <a href="/instances" className="text-primary hover:underline">Conecte uma instância primeiro.</a></p>
-            ) : (
-              <div className="space-y-2">
-                {instances.map((inst) => (
-                  <button
-                    key={inst.id}
-                    type="button"
-                    onClick={() => toggleInstance(inst.id)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border text-sm transition-colors ${form.instanceIds.includes(inst.id) ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {form.instanceIds.includes(inst.id) ? (
-                        <CheckCircle className="w-4 h-4 text-primary" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />
-                      )}
-                      <span className="font-medium">{inst.displayName}</span>
-                    </div>
-                    <span className="text-muted-foreground text-xs">{inst.phoneNumber ?? '—'}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {form.instanceIds.length > 1 && (
-              <p className="text-xs text-muted-foreground mt-3">
-                As mensagens serão intercaladas entre as {form.instanceIds.length} instâncias automaticamente.
-              </p>
-            )}
-          </div>
-        )}
-
-        {step === 4 && (
           <>
             <div>
               <label className="text-sm font-medium block mb-1.5">Intervalo entre mensagens</label>
@@ -179,9 +130,7 @@ export default function CampaignNewPage() {
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground mb-1">Mínimo (segundos)</p>
                   <input
-                    type="number"
-                    min={5}
-                    max={600}
+                    type="number" min={5} max={600}
                     value={form.intervalMin}
                     onChange={(e) => setForm((p) => ({ ...p, intervalMin: parseInt(e.target.value) || 15 }))}
                     className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
@@ -190,16 +139,14 @@ export default function CampaignNewPage() {
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground mb-1">Máximo (segundos)</p>
                   <input
-                    type="number"
-                    min={5}
-                    max={600}
+                    type="number" min={5} max={600}
                     value={form.intervalMax}
                     onChange={(e) => setForm((p) => ({ ...p, intervalMax: parseInt(e.target.value) || 45 }))}
                     className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5">Um intervalo aleatório entre {form.intervalMin}s e {form.intervalMax}s será usado para parecer mais humano.</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Intervalo aleatório entre {form.intervalMin}s e {form.intervalMax}s para parecer mais humano.</p>
             </div>
 
             <div>
@@ -210,16 +157,16 @@ export default function CampaignNewPage() {
                 className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder="5511999999999"
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Este número receberá uma notificação toda vez que um lead demonstrar interesse.</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Este número receberá uma notificação quando um lead demonstrar interesse positivo.</p>
             </div>
 
             <div className="bg-muted/50 rounded-xl p-4 space-y-2 text-sm">
-              <p className="font-medium">Resumo da campanha</p>
+              <p className="font-medium">Resumo da sessão</p>
               <div className="space-y-1 text-muted-foreground">
                 <p>Lista: <b className="text-foreground">{lists.find((l) => l.id === form.contactListId)?.fileName}</b></p>
                 <p>Contatos: <b className="text-foreground">{lists.find((l) => l.id === form.contactListId)?.validCount ?? 0}</b></p>
-                <p>Instâncias: <b className="text-foreground">{form.instanceIds.length}</b></p>
                 <p>Intervalo: <b className="text-foreground">{form.intervalMin}–{form.intervalMax}s</b></p>
+                <p className="text-xs">As instâncias serão definidas automaticamente pelo administrador.</p>
               </div>
             </div>
           </>
@@ -236,7 +183,7 @@ export default function CampaignNewPage() {
           Anterior
         </button>
 
-        {step < 4 ? (
+        {step < 3 ? (
           <button
             onClick={() => setStep((s) => (s + 1) as Step)}
             disabled={!canNext()}
@@ -248,11 +195,11 @@ export default function CampaignNewPage() {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={saving || !canNext()}
+            disabled={saving}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Criar Campanha
+            Criar Sessão
           </button>
         )}
       </div>

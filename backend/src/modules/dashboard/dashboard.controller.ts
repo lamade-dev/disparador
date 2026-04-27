@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../../prisma/client';
 
 export async function getStats(req: Request, res: Response) {
-  const where = req.user!.role === 'MASTER' ? {} : { userId: req.user!.sub };
+  const isMaster = req.user!.role === 'MASTER';
+  const where = isMaster ? {} : { userId: req.user!.sub };
 
   const [campaigns, instances] = await Promise.all([
     prisma.campaign.findMany({
@@ -16,14 +17,15 @@ export async function getStats(req: Request, res: Response) {
         repliedCount: true,
         positiveCount: true,
         createdAt: true,
+        user: { select: { id: true, name: true, email: true } },
         contactList: { select: { validCount: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 20,
     }),
     prisma.instance.findMany({
-      where: req.user!.role === 'MASTER' ? {} : { userId: req.user!.sub },
       select: { id: true, displayName: true, status: true, phoneNumber: true },
+      orderBy: { createdAt: 'desc' },
     }),
   ]);
 
@@ -37,5 +39,24 @@ export async function getStats(req: Request, res: Response) {
     { sent: 0, delivered: 0, replied: 0, positive: 0 }
   );
 
-  res.json({ totals, campaigns, instances });
+  // For master: build per-gestor breakdown
+  let gestorStats: Array<{ id: string; name: string; email: string; sent: number; delivered: number; replied: number; positive: number; sessions: number }> = [];
+  if (isMaster) {
+    const byGestor = new Map<string, typeof gestorStats[0]>();
+    for (const c of campaigns) {
+      const u = c.user;
+      if (!byGestor.has(u.id)) {
+        byGestor.set(u.id, { id: u.id, name: u.name, email: u.email, sent: 0, delivered: 0, replied: 0, positive: 0, sessions: 0 });
+      }
+      const g = byGestor.get(u.id)!;
+      g.sent += c.sentCount;
+      g.delivered += c.deliveredCount;
+      g.replied += c.repliedCount;
+      g.positive += c.positiveCount;
+      g.sessions += 1;
+    }
+    gestorStats = Array.from(byGestor.values());
+  }
+
+  res.json({ totals, campaigns, instances, gestorStats });
 }

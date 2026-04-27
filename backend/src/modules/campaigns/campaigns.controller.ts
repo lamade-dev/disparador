@@ -8,7 +8,6 @@ const createSchema = z.object({
   name: z.string().min(2),
   contactListId: z.string(),
   messageTemplate: z.string().min(5),
-  instanceIds: z.array(z.string()).min(1),
   intervalMin: z.number().int().min(5).max(600).default(15),
   intervalMax: z.number().int().min(5).max(600).default(45),
   redirectNumber: z.string().optional(),
@@ -19,7 +18,6 @@ export async function listCampaigns(req: Request, res: Response) {
     where: { userId: req.user!.sub },
     include: {
       contactList: { select: { fileName: true, validCount: true } },
-      instances: { include: { instance: { select: { displayName: true, status: true } } } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -43,12 +41,6 @@ export async function createCampaign(req: Request, res: Response) {
       intervalMin: data.intervalMin,
       intervalMax: data.intervalMax,
       redirectNumber: data.redirectNumber,
-      instances: {
-        createMany: { data: data.instanceIds.map((id) => ({ instanceId: id })) },
-      },
-    },
-    include: {
-      instances: { include: { instance: { select: { displayName: true } } } },
     },
   });
 
@@ -65,7 +57,6 @@ export async function getCampaign(req: Request, res: Response) {
       where: { id, userId: req.user!.sub },
       include: {
         contactList: { select: { fileName: true, validCount: true } },
-        instances: { include: { instance: { select: { id: true, displayName: true, status: true } } } },
       },
     }),
     prisma.message.findMany({
@@ -77,7 +68,7 @@ export async function getCampaign(req: Request, res: Response) {
     prisma.message.count({ where: { campaignId: id } }),
   ]);
 
-  if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada' }); return; }
+  if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada' }); return; }
 
   res.json({ ...campaign, messages, total, page, pages: Math.ceil(total / limit) });
 }
@@ -86,9 +77,9 @@ export async function startCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub },
   });
-  if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada' }); return; }
+  if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada' }); return; }
   if (!['DRAFT', 'PAUSED'].includes(campaign.status)) {
-    res.status(400).json({ error: 'Campanha não pode ser iniciada neste estado' }); return;
+    res.status(400).json({ error: 'Sessão não pode ser iniciada neste estado' }); return;
   }
 
   if (campaign.status === 'DRAFT') {
@@ -105,7 +96,7 @@ export async function pauseCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub, status: 'RUNNING' },
   });
-  if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada ou não está em execução' }); return; }
+  if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada ou não está em execução' }); return; }
 
   await sendQueue.pause();
   await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'PAUSED' } });
@@ -117,7 +108,7 @@ export async function resumeCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub, status: 'PAUSED' },
   });
-  if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada ou não está pausada' }); return; }
+  if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada ou não está pausada' }); return; }
 
   await sendQueue.resume();
   await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'RUNNING' } });
@@ -129,7 +120,7 @@ export async function cancelCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub },
   });
-  if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada' }); return; }
+  if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada' }); return; }
 
   await sendQueue.drain();
   await prisma.campaign.update({

@@ -38,20 +38,20 @@ export default function CampaignListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Campanhas</h1>
-          <p className="text-muted-foreground text-sm">{campaigns.length} campanha{campaigns.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold">Sessões</h1>
+          <p className="text-muted-foreground text-sm">{campaigns.length} sessão{campaigns.length !== 1 ? 'ões' : ''}</p>
         </div>
-        <Link to="/campaigns/new" className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+        <Link to="/sessions/new" className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
           <Plus className="w-4 h-4" />
-          Nova Campanha
+          Nova Sessão
         </Link>
       </div>
 
       {campaigns.length === 0 ? (
         <div className="bg-card border rounded-xl p-12 text-center">
           <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="font-medium">Nenhuma campanha ainda</p>
-          <Link to="/campaigns/new" className="text-sm text-primary hover:underline mt-2 inline-block">Criar primeira campanha</Link>
+          <p className="font-medium">Nenhuma sessão ainda</p>
+          <Link to="/sessions/new" className="text-sm text-primary hover:underline mt-2 inline-block">Criar primeira sessão</Link>
         </div>
       ) : (
         <div className="bg-card border rounded-xl divide-y">
@@ -63,7 +63,7 @@ export default function CampaignListPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Link to={`/campaigns/${c.id}`} className="font-semibold hover:text-primary transition-colors">
+                      <Link to={`/sessions/${c.id}`} className="font-semibold hover:text-primary transition-colors">
                         {c.name}
                       </Link>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sc.color}`}>{sc.label}</span>

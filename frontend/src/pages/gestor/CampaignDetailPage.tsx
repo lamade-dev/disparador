@@ -16,7 +16,6 @@ interface Campaign {
   sentCount: number; deliveredCount: number; repliedCount: number; positiveCount: number;
   messageTemplate: string; intervalMin: number; intervalMax: number; redirectNumber: string | null;
   contactList: { fileName: string; validCount: number };
-  instances: Array<{ instance: { id: string; displayName: string } }>;
   messages: Message[]; total: number; createdAt: string;
 }
 
@@ -83,7 +82,7 @@ export default function CampaignDetailPage() {
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
-  if (!campaign) return <p>Campanha não encontrada</p>;
+  if (!campaign) return <p>Sessão não encontrada</p>;
 
   const progress = campaign.contactList.validCount > 0
     ? Math.round((campaign.sentCount / campaign.contactList.validCount) * 100) : 0;
@@ -91,7 +90,7 @@ export default function CampaignDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/campaigns')} className="p-2 rounded-lg border hover:bg-muted transition-colors">
+        <button onClick={() => navigate('/sessions')} className="p-2 rounded-lg border hover:bg-muted transition-colors">
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex-1">
@@ -118,7 +117,7 @@ export default function CampaignDetailPage() {
             </button>
           )}
           {['RUNNING', 'PAUSED', 'DRAFT'].includes(campaign.status) && (
-            <button disabled={actionLoading} onClick={() => { if (confirm('Cancelar esta campanha?')) doAction('cancel'); }} className="border border-destructive/30 text-destructive px-3 py-2 rounded-lg text-sm hover:bg-destructive/10 transition-colors">
+            <button disabled={actionLoading} onClick={() => { if (confirm('Cancelar esta sessão?')) doAction('cancel'); }} className="border border-destructive/30 text-destructive px-3 py-2 rounded-lg text-sm hover:bg-destructive/10 transition-colors">
               <XCircle className="w-4 h-4" />
             </button>
           )}
@@ -192,7 +191,7 @@ export default function CampaignDetailPage() {
           ))}
           {campaign.messages.length === 0 && (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              Nenhuma mensagem ainda. Inicie a campanha para começar.
+              Nenhuma mensagem ainda. Inicie a sessão para começar.
             </div>
           )}
         </div>

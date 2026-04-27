@@ -42,47 +42,58 @@ enum ResponseSentiment {
   NEUTRAL
 }
 
+enum DispatchMode {
+  ALL
+  SPECIFIC
+}
+
 model User {
-  id           String     @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
-  email        String     @unique
+  email        String        @unique
   password     String
-  role         Role       @default(GESTOR)
-  active       Boolean    @default(true)
+  role         Role          @default(GESTOR)
+  active       Boolean       @default(true)
   createdById  String?
-  createdBy    User?      @relation("UserCreatedBy", fields: [createdById], references: [id])
-  createdUsers User[]     @relation("UserCreatedBy")
+  createdBy    User?         @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers User[]        @relation("UserCreatedBy")
   instances    Instance[]
   campaigns    Campaign[]
   contactLists ContactList[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Instance {
-  id           String         @id @default(cuid())
-  userId       String
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String         @unique
-  displayName  String
-  phoneNumber  String?
-  status       InstanceStatus @default(DISCONNECTED)
-  campaigns    CampaignInstance[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String         @unique
+  displayName String
+  phoneNumber String?
+  status      InstanceStatus @default(DISCONNECTED)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model DispatchConfig {
+  id                 String       @id @default("global")
+  mode               DispatchMode @default(ALL)
+  specificInstanceId String?
+  updatedAt          DateTime     @updatedAt
 }
 
 model ContactList {
-  id          String     @id @default(cuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fileName    String
-  totalRows   Int
-  validCount  Int        @default(0)
-  invalidCount Int       @default(0)
-  contacts    Contact[]
-  campaigns   Campaign[]
-  createdAt   DateTime   @default(now())
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName     String
+  totalRows    Int
+  validCount   Int        @default(0)
+  invalidCount Int        @default(0)
+  contacts     Contact[]
+  campaigns    Campaign[]
+  createdAt    DateTime   @default(now())
 }
 
 model Contact {
@@ -111,7 +122,6 @@ model Campaign {
   intervalMax     Int            @default(45)
   redirectNumber  String?
   status          CampaignStatus @default(DRAFT)
-  instances       CampaignInstance[]
   messages        Message[]
   sentCount       Int            @default(0)
   deliveredCount  Int            @default(0)
@@ -124,15 +134,6 @@ model Campaign {
 
   @@index([userId])
   @@index([status])
-}
-
-model CampaignInstance {
-  campaignId  String
-  instanceId  String
-  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  instance    Instance @relation(fields: [instanceId], references: [id])
-
-  @@id([campaignId, instanceId])
 }
 
 model Message {
