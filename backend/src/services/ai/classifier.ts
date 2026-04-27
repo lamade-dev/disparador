@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { env } from '../../config/env';
 
-const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 const SYSTEM_PROMPT = `Você é um classificador de respostas de WhatsApp para campanhas de marketing.
 Classifique a mensagem recebida como:
@@ -15,27 +15,19 @@ export type Sentiment = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
 
 export async function classifyResponse(text: string): Promise<Sentiment> {
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       max_tokens: 128,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
+      response_format: { type: 'json_object' },
       messages: [
-        {
-          role: 'user',
-          content: `Mensagem recebida: "${text}"`,
-        },
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Mensagem recebida: "${text}"` },
       ],
     });
 
-    const content = response.content[0];
-    if (content.type === 'text') {
-      const parsed = JSON.parse(content.text.trim());
+    const content = response.choices[0]?.message?.content;
+    if (content) {
+      const parsed = JSON.parse(content);
       if (['POSITIVE', 'NEGATIVE', 'NEUTRAL'].includes(parsed.sentiment)) {
         return parsed.sentiment as Sentiment;
       }

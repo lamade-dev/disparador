@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { env } from '../../config/env';
 
-const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 const SYSTEM_PROMPT = `Você é um assistente especializado em reescrever mensagens de WhatsApp.
 Sua tarefa é reescrever a mensagem fornecida de forma levemente diferente, mantendo 100% da intenção original.
@@ -20,26 +20,17 @@ export async function rewriteMessage(template: string, variables: Record<string,
   }
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       max_tokens: 1024,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
       messages: [
-        {
-          role: 'user',
-          content: `Reescreva esta mensagem:\n\n${text}`,
-        },
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Reescreva esta mensagem:\n\n${text}` },
       ],
     });
 
-    const content = response.content[0];
-    if (content.type === 'text') return content.text.trim();
+    const content = response.choices[0]?.message?.content;
+    if (content) return content.trim();
   } catch (error) {
     console.error('[AI Rewriter] Error:', error);
   }

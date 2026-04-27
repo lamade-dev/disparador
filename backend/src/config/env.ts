@@ -5,7 +5,7 @@ const envSchema = z.object({
   REDIS_URL: z.string().url(),
   EVOLUTION_URL: z.string().url(),
   EVOLUTION_API_KEY: z.string().min(1),
-  ANTHROPIC_API_KEY: z.string().min(1),
+  OPENAI_API_KEY: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   PORT: z.string().default('3001'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
