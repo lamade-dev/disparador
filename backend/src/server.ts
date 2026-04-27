@@ -19,7 +19,7 @@ const app = express();
 const httpServer = http.createServer(app);
 
 const io = new SocketServer(httpServer, {
-  cors: { origin: env.FRONTEND_URL, credentials: true },
+  cors: { origin: '*' },
 });
 
 let _io: SocketServer;
@@ -37,7 +37,7 @@ io.on('connection', (socket) => {
 
 _io = io;
 
-app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
