@@ -35,7 +35,7 @@ export async function createInstance(req: Request, res: Response) {
 
 export async function getQrCode(req: Request, res: Response) {
   const instance = await prisma.instance.findFirst({
-    where: { id: req.params.id, userId: req.user!.role === 'MASTER' ? undefined : req.user!.sub },
+    where: { id: req.params.id as string, userId: req.user!.role === 'MASTER' ? undefined : req.user!.sub },
   });
   if (!instance) { res.status(404).json({ error: 'Instância não encontrada' }); return; }
 
@@ -45,7 +45,7 @@ export async function getQrCode(req: Request, res: Response) {
 
 export async function getStatus(req: Request, res: Response) {
   const instance = await prisma.instance.findFirst({
-    where: { id: req.params.id, userId: req.user!.role === 'MASTER' ? undefined : req.user!.sub },
+    where: { id: req.params.id as string, userId: req.user!.role === 'MASTER' ? undefined : req.user!.sub },
   });
   if (!instance) { res.status(404).json({ error: 'Instância não encontrada' }); return; }
 
@@ -62,7 +62,7 @@ export async function getStatus(req: Request, res: Response) {
 
 export async function disconnectInstance(req: Request, res: Response) {
   const instance = await prisma.instance.findFirst({
-    where: { id: req.params.id, userId: req.user!.sub },
+    where: { id: req.params.id as string, userId: req.user!.sub },
   });
   if (!instance) { res.status(404).json({ error: 'Instância não encontrada' }); return; }
 
@@ -75,7 +75,7 @@ export async function disconnectInstance(req: Request, res: Response) {
 
 export async function deleteInstance(req: Request, res: Response) {
   const instance = await prisma.instance.findFirst({
-    where: { id: req.params.id, userId: req.user!.sub },
+    where: { id: req.params.id as string, userId: req.user!.sub },
   });
   if (!instance) { res.status(404).json({ error: 'Instância não encontrada' }); return; }
 

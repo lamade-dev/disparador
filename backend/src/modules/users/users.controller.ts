@@ -43,7 +43,7 @@ export async function createUser(req: Request, res: Response) {
 }
 
 export async function updateUser(req: Request, res: Response) {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const data = z.object({ name: z.string().optional(), active: z.boolean().optional() }).parse(req.body);
 
   const user = await prisma.user.update({
@@ -56,7 +56,7 @@ export async function updateUser(req: Request, res: Response) {
 }
 
 export async function deleteUser(req: Request, res: Response) {
-  const { id } = req.params;
+  const id = req.params.id as string;
   await prisma.user.update({ where: { id }, data: { active: false } });
   res.status(204).send();
 }

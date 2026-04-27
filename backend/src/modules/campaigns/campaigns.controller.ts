@@ -56,24 +56,25 @@ export async function createCampaign(req: Request, res: Response) {
 }
 
 export async function getCampaign(req: Request, res: Response) {
+  const id = req.params.id as string;
   const page = parseInt(String(req.query.page ?? '1'), 10);
   const limit = 50;
 
   const [campaign, messages, total] = await Promise.all([
     prisma.campaign.findFirst({
-      where: { id: req.params.id, userId: req.user!.sub },
+      where: { id, userId: req.user!.sub },
       include: {
         contactList: { select: { fileName: true, validCount: true } },
         instances: { include: { instance: { select: { id: true, displayName: true, status: true } } } },
       },
     }),
     prisma.message.findMany({
-      where: { campaignId: req.params.id },
+      where: { campaignId: id },
       orderBy: { createdAt: 'asc' },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.message.count({ where: { campaignId: req.params.id } }),
+    prisma.message.count({ where: { campaignId: id } }),
   ]);
 
   if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada' }); return; }
@@ -83,7 +84,7 @@ export async function getCampaign(req: Request, res: Response) {
 
 export async function startCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
-    where: { id: req.params.id, userId: req.user!.sub },
+    where: { id: req.params.id as string, userId: req.user!.sub },
   });
   if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada' }); return; }
   if (!['DRAFT', 'PAUSED'].includes(campaign.status)) {
@@ -102,7 +103,7 @@ export async function startCampaign(req: Request, res: Response) {
 
 export async function pauseCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
-    where: { id: req.params.id, userId: req.user!.sub, status: 'RUNNING' },
+    where: { id: req.params.id as string, userId: req.user!.sub, status: 'RUNNING' },
   });
   if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada ou não está em execução' }); return; }
 
@@ -114,7 +115,7 @@ export async function pauseCampaign(req: Request, res: Response) {
 
 export async function resumeCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
-    where: { id: req.params.id, userId: req.user!.sub, status: 'PAUSED' },
+    where: { id: req.params.id as string, userId: req.user!.sub, status: 'PAUSED' },
   });
   if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada ou não está pausada' }); return; }
 
@@ -126,7 +127,7 @@ export async function resumeCampaign(req: Request, res: Response) {
 
 export async function cancelCampaign(req: Request, res: Response) {
   const campaign = await prisma.campaign.findFirst({
-    where: { id: req.params.id, userId: req.user!.sub },
+    where: { id: req.params.id as string, userId: req.user!.sub },
   });
   if (!campaign) { res.status(404).json({ error: 'Campanha não encontrada' }); return; }
 

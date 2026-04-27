@@ -86,13 +86,13 @@ export async function getContactList(req: Request, res: Response) {
   const limit = 50;
 
   const [list, contacts, total] = await Promise.all([
-    prisma.contactList.findFirst({ where: { id: req.params.id, userId: req.user!.sub } }),
+    prisma.contactList.findFirst({ where: { id: req.params.id as string, userId: req.user!.sub } }),
     prisma.contact.findMany({
-      where: { contactListId: req.params.id },
+      where: { contactListId: req.params.id as string },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.contact.count({ where: { contactListId: req.params.id } }),
+    prisma.contact.count({ where: { contactListId: req.params.id as string } }),
   ]);
 
   if (!list) { res.status(404).json({ error: 'Lista não encontrada' }); return; }
@@ -101,8 +101,8 @@ export async function getContactList(req: Request, res: Response) {
 }
 
 export async function deleteContactList(req: Request, res: Response) {
-  const list = await prisma.contactList.findFirst({ where: { id: req.params.id, userId: req.user!.sub } });
+  const list = await prisma.contactList.findFirst({ where: { id: req.params.id as string, userId: req.user!.sub } });
   if (!list) { res.status(404).json({ error: 'Lista não encontrada' }); return; }
-  await prisma.contactList.delete({ where: { id: req.params.id } });
+  await prisma.contactList.delete({ where: { id: req.params.id as string } });
   res.status(204).send();
 }
