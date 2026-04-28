@@ -1,9 +1,8 @@
 import { Worker, Job } from 'bullmq';
-import { env } from '../../../config/env';
 import { prisma } from '../../../prisma/client';
 import { evolution } from '../../evolution/evolution.client';
 import { classifyResponse } from '../../ai/classifier';
-import { AnalysisJobData } from '../queue';
+import { AnalysisJobData, redisConnection } from '../queue';
 import { getIO } from '../../../server';
 
 export function startAnalysisWorker() {
@@ -66,7 +65,7 @@ export function startAnalysisWorker() {
       });
     },
     {
-      connection: { url: env.REDIS_URL },
+      connection: redisConnection,
       concurrency: 3,
     }
   );

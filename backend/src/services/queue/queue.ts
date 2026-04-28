@@ -1,7 +1,14 @@
 import { Queue } from 'bullmq';
+import IORedis from 'ioredis';
 import { env } from '../../config/env';
 
-const connection = { url: env.REDIS_URL };
+export const redisConnection = new IORedis(env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  lazyConnect: false,
+});
+
+const connection = redisConnection;
 
 export const sendQueue = new Queue('send-queue', {
   connection,
