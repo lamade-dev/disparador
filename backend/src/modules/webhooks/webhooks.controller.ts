@@ -90,8 +90,9 @@ async function handleMessagesUpdate(instanceName: string, data: any) {
 
     const ackStatus = update.update?.status;
 
-    const isDelivered = ackStatus === 'DELIVERY_ACK' || ackStatus === 2 || ackStatus === 3;
-    const isRead = ackStatus === 'READ_ACK' || ackStatus === 4;
+    // Baileys ACK: 2=DELIVERY_ACK, 3=READ_ACK (some Evolution builds send string or number)
+    const isDelivered = ackStatus === 'DELIVERY_ACK' || ackStatus === 2;
+    const isRead = ackStatus === 'READ_ACK' || ackStatus === 'READ' || ackStatus === 3;
 
     if (!isDelivered && !isRead) continue;
 

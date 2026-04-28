@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, XCircle, Send, CheckCheck, BookOpen, Reply, TrendingUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, Play, Pause, XCircle, Send, CheckCheck, BookOpen, Reply, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
 import { formatDate, formatPhone, formatNumber } from '../../lib/utils';
@@ -43,6 +43,7 @@ export default function CampaignDetailPage() {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const res = await api.get(`/campaigns/${id}`);
@@ -92,7 +93,13 @@ export default function CampaignDetailPage() {
   if (!campaign) return <p>Sessão não encontrada</p>;
 
   const progress = campaign.contactList.validCount > 0
-    ? Math.round((campaign.sentCount / campaign.contactList.validCount) * 100) : 0;
+    ? Math.min(100, Math.round((campaign.sentCount / campaign.contactList.validCount) * 100)) : 0;
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -105,6 +112,10 @@ export default function CampaignDetailPage() {
           <p className="text-muted-foreground text-sm">{campaign.contactList.fileName} · {formatDate(campaign.createdAt)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleRefresh} disabled={refreshing} className="flex items-center gap-1.5 border px-3 py-2 rounded-lg text-sm hover:bg-muted disabled:opacity-50 transition-colors">
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Atualizar
+          </button>
           {campaign.status === 'DRAFT' && (
             <button disabled={actionLoading} onClick={() => doAction('start')} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
               {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
