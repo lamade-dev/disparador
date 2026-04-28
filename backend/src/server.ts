@@ -58,11 +58,30 @@ app.use(errorHandler as any);
 
 const PORT = parseInt(env.PORT, 10);
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   startSendWorker();
   startAnalysisWorker();
   console.log('⚙️  Workers started');
+
+  // Auto-fix webhooks for all instances on startup
+  try {
+    const { prisma } = await import('./prisma/client');
+    const { evolution } = await import('./services/evolution/evolution.client');
+    const instances = await prisma.instance.findMany({ select: { name: true } });
+    const backendUrl = process.env.BACKEND_URL ?? 'https://disparador-disparador.kj2jgf.easypanel.host';
+    const webhookUrl = `${backendUrl}/api/webhooks/evolution`;
+    for (const inst of instances) {
+      try {
+        await evolution.setWebhook(inst.name, webhookUrl);
+        console.log(`✅ Webhook set for ${inst.name}`);
+      } catch (e) {
+        console.warn(`⚠️  Could not set webhook for ${inst.name}`);
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️  Could not auto-fix webhooks:', e);
+  }
 });
 
 export { app, httpServer };
