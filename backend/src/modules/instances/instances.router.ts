@@ -7,6 +7,7 @@ import {
   getStatus,
   disconnectInstance,
   deleteInstance,
+  fixWebhook,
 } from './instances.controller';
 
 const router = Router();
@@ -18,5 +19,6 @@ router.get('/:id/qrcode', getQrCode);
 router.get('/:id/status', getStatus);
 router.post('/:id/disconnect', disconnectInstance);
 router.delete('/:id', deleteInstance);
+router.post('/:id/fix-webhook', fixWebhook);
 
 export default router;

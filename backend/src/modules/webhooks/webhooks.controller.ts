@@ -9,6 +9,8 @@ export async function handleEvolutionWebhook(req: Request, res: Response) {
 
   const { event, instance: instanceName, data } = req.body;
 
+  console.log(`[Webhook] event=${event} instance=${instanceName}`);
+
   if (!event || !instanceName) return;
 
   try {
@@ -17,6 +19,7 @@ export async function handleEvolutionWebhook(req: Request, res: Response) {
     } else if (event === 'messages.upsert') {
       await handleMessagesUpsert(instanceName, data);
     } else if (event === 'messages.update') {
+      console.log('[Webhook] messages.update data:', JSON.stringify(data).slice(0, 500));
       await handleMessagesUpdate(instanceName, data);
     }
   } catch (err) {

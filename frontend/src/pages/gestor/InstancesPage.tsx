@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Smartphone, RefreshCw, Trash2, Power, QrCode, Loader2 } from 'lucide-react';
+import { Plus, Smartphone, RefreshCw, Trash2, Power, QrCode, Loader2, Wrench } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
 import { cn } from '../../lib/utils';
@@ -88,6 +88,15 @@ export default function InstancesPage() {
     setInstances((prev) => prev.filter((inst) => inst.id !== id));
   }
 
+  async function handleFixWebhook(id: string) {
+    try {
+      await api.post(`/instances/${id}/fix-webhook`);
+      alert('Webhook reconfigurado com sucesso!');
+    } catch (err: any) {
+      alert(err.response?.data?.error ?? 'Erro ao reconfigurar webhook');
+    }
+  }
+
   if (loading) return <div className="flex items-center justify-center h-64"><RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
@@ -170,6 +179,9 @@ export default function InstancesPage() {
                     Desconectar
                   </button>
                 )}
+                <button onClick={() => handleFixWebhook(inst.id)} className="flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors" title="Reconfigurar webhook">
+                  <Wrench className="w-3.5 h-3.5" />
+                </button>
                 <button onClick={() => handleDelete(inst.id)} className="flex items-center gap-1.5 text-xs border border-destructive/30 text-destructive rounded-lg px-3 py-1.5 hover:bg-destructive/10 transition-colors ml-auto">
                   <Trash2 className="w-3.5 h-3.5" />
                   Deletar

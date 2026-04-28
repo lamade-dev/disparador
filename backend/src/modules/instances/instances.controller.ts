@@ -74,6 +74,19 @@ export async function disconnectInstance(req: Request, res: Response) {
   res.status(204).send();
 }
 
+export async function fixWebhook(req: Request, res: Response) {
+  const instance = await prisma.instance.findFirst({
+    where: { id: req.params.id as string },
+  });
+  if (!instance) { res.status(404).json({ error: 'Instância não encontrada' }); return; }
+
+  const backendUrl = process.env.BACKEND_URL ?? `https://disparador-disparador.kj2jgf.easypanel.host`;
+  const webhookUrl = `${backendUrl}/api/webhooks/evolution`;
+  await evolution.setWebhook(instance.name, webhookUrl);
+
+  res.json({ ok: true, webhookUrl });
+}
+
 export async function deleteInstance(req: Request, res: Response) {
   const instance = await prisma.instance.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub },

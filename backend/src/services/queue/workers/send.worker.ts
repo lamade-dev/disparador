@@ -48,7 +48,7 @@ export function startSendWorker() {
       const campaign = await prisma.campaign.update({
         where: { id: campaignId },
         data: { sentCount: { increment: 1 } },
-        select: { sentCount: true, deliveredCount: true, repliedCount: true, positiveCount: true, userId: true },
+        select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
       });
 
       const io = getIO();
