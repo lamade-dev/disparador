@@ -73,13 +73,11 @@ export default function CampaignListPage() {
             const sc = statusConfig[c.status] ?? statusConfig.DRAFT;
             const progress = c.contactList.validCount > 0 ? Math.round((c.sentCount / c.contactList.validCount) * 100) : 0;
             return (
-              <div key={c.id} className="p-4">
+              <div key={c.id} className="p-4 hover:bg-muted/40 transition-colors cursor-pointer" onClick={() => window.location.href = `/sessions/${c.id}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Link to={`/sessions/${c.id}`} className="font-semibold hover:text-primary transition-colors">
-                        {c.name}
-                      </Link>
+                      <span className="font-semibold">{c.name}</span>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sc.color}`}>{sc.label}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">{c.contactList.fileName} · {formatDate(c.createdAt)}</p>
@@ -104,7 +102,7 @@ export default function CampaignListPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                     {c.status === 'DRAFT' && (
                       <button onClick={() => handleAction(c.id, 'start')} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors">
                         <Play className="w-3.5 h-3.5" /> Iniciar
