@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, MessageSquare, Loader2, Play, Pause, XCircle } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Play, Pause, XCircle, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatDate, formatNumber } from '../../lib/utils';
 
@@ -33,6 +33,16 @@ export default function CampaignListPage() {
       setCampaigns(res.data);
     } catch (err: any) {
       alert(err.response?.data?.error ?? `Erro ao executar ação: ${action}`);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Excluir a sessão "${name}"? Todas as mensagens serão removidas.`)) return;
+    try {
+      await api.delete(`/campaigns/${id}`);
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.error ?? 'Erro ao excluir sessão');
     }
   }
 
@@ -113,6 +123,11 @@ export default function CampaignListPage() {
                     {['RUNNING', 'PAUSED', 'DRAFT'].includes(c.status) && (
                       <button onClick={() => handleAction(c.id, 'cancel')} className="border border-destructive/30 text-destructive px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-destructive/10 transition-colors">
                         <XCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {['DRAFT', 'CANCELLED', 'COMPLETED'].includes(c.status) && (
+                      <button onClick={() => handleDelete(c.id, c.name)} className="border border-destructive/30 text-destructive px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-destructive/10 transition-colors" title="Excluir sessão">
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>

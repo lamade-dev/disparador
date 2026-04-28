@@ -120,6 +120,21 @@ export const resumeCampaign = wrap(async (req, res) => {
   res.json({ status: 'RUNNING' });
 });
 
+export const deleteCampaign = wrap(async (req, res) => {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: req.params.id as string, userId: req.user!.sub },
+  });
+  if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada' }); return; }
+  if (campaign.status === 'RUNNING') {
+    res.status(400).json({ error: 'Pause a sessão antes de excluir' }); return;
+  }
+
+  await prisma.message.deleteMany({ where: { campaignId: campaign.id } });
+  await prisma.campaign.delete({ where: { id: campaign.id } });
+
+  res.status(204).send();
+});
+
 export const cancelCampaign = wrap(async (req, res) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub },

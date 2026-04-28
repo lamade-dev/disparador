@@ -8,6 +8,7 @@ import {
   pauseCampaign,
   resumeCampaign,
   cancelCampaign,
+  deleteCampaign,
 } from './campaigns.controller';
 
 const router = Router();
@@ -20,5 +21,6 @@ router.patch('/:id/start', startCampaign);
 router.patch('/:id/pause', pauseCampaign);
 router.patch('/:id/resume', resumeCampaign);
 router.patch('/:id/cancel', cancelCampaign);
+router.delete('/:id', deleteCampaign);
 
 export default router;
