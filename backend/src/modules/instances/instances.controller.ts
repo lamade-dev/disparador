@@ -24,7 +24,8 @@ export async function createInstance(req: Request, res: Response) {
   const name = `inst_${req.user!.sub.slice(-6)}_${Date.now()}`;
 
   await evolution.createInstance(name);
-  await evolution.setWebhook(name, `${env.FRONTEND_URL.replace(':5173', ':3001')}/api/webhooks/evolution`);
+  const backendUrl = process.env.BACKEND_URL ?? `https://disparador-disparador.kj2jgf.easypanel.host`;
+  await evolution.setWebhook(name, `${backendUrl}/api/webhooks/evolution`);
 
   const instance = await prisma.instance.create({
     data: { userId: req.user!.sub, name, displayName, status: 'CONNECTING' },
