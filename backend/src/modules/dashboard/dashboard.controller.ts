@@ -42,7 +42,7 @@ export async function getStats(req: Request, res: Response) {
   );
 
   // For master: build per-gestor breakdown
-  let gestorStats: Array<{ id: string; name: string; email: string; sent: number; delivered: number; replied: number; positive: number; sessions: number }> = [];
+  let gestorStats: Array<{ id: string; name: string; email: string; sent: number; delivered: number; read: number; replied: number; positive: number; sessions: number }> = [];
   if (isMaster) {
     const byGestor = new Map<string, typeof gestorStats[0]>();
     for (const c of campaigns) {
