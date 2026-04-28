@@ -27,9 +27,13 @@ export default function CampaignListPage() {
   }, []);
 
   async function handleAction(id: string, action: 'start' | 'pause' | 'cancel') {
-    await api.patch(`/campaigns/${id}/${action}`);
-    const res = await api.get('/campaigns');
-    setCampaigns(res.data);
+    try {
+      await api.patch(`/campaigns/${id}/${action}`);
+      const res = await api.get('/campaigns');
+      setCampaigns(res.data);
+    } catch (err: any) {
+      alert(err.response?.data?.error ?? `Erro ao executar ação: ${action}`);
+    }
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
