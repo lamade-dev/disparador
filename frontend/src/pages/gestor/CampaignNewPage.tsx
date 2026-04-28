@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, Loader2, CheckCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader2, CheckCircle, Sparkles, X, Copy, Check } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface ContactList { id: string; fileName: string; validCount: number; }
 
 type Step = 1 | 2 | 3;
+
+interface GeneratedTemplate {
+  template_name: string;
+  category: string;
+  body: string;
+  footer: string;
+  button: string;
+  justification: string;
+}
 
 export default function CampaignNewPage() {
   const navigate = useNavigate();
@@ -21,6 +30,13 @@ export default function CampaignNewPage() {
     intervalMax: 45,
     redirectNumber: '',
   });
+
+  // AI modal state
+  const [showAI, setShowAI] = useState(false);
+  const [aiBase, setAiBase] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<GeneratedTemplate | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api.get('/contacts').then((res) => setLists(res.data));
@@ -39,6 +55,35 @@ export default function CampaignNewPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleGenerateAI() {
+    if (!aiBase.trim()) return;
+    setAiLoading(true);
+    setAiResult(null);
+    try {
+      const res = await api.post('/ai/generate-template', { baseMessage: aiBase });
+      setAiResult(res.data);
+    } catch (err: any) {
+      alert(err.response?.data?.error ?? 'Erro ao gerar template');
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function handleUseTemplate() {
+    if (!aiResult) return;
+    const full = `${aiResult.body}\n\n${aiResult.footer}`;
+    setForm((p) => ({ ...p, messageTemplate: full }));
+    setShowAI(false);
+    setAiResult(null);
+    setAiBase('');
+  }
+
+  function handleCopy(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   const canNext = () => {
@@ -108,9 +153,21 @@ export default function CampaignNewPage() {
         )}
 
         {step === 2 && (
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Mensagem da Sessão</label>
-            <p className="text-xs text-muted-foreground mb-3">Use {'{nome}'} e {'{telefone}'} para personalizar. A IA irá variar cada envio para evitar bloqueios.</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium block">Mensagem da Sessão</label>
+                <p className="text-xs text-muted-foreground mt-0.5">Use {'{nome}'} e {'{telefone}'} para personalizar. A IA irá variar cada envio para evitar bloqueios.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAI(true)}
+                className="flex items-center gap-1.5 bg-violet-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Gerar com IA
+              </button>
+            </div>
             <textarea
               value={form.messageTemplate}
               onChange={(e) => setForm((p) => ({ ...p, messageTemplate: e.target.value }))}
@@ -118,7 +175,7 @@ export default function CampaignNewPage() {
               rows={8}
               placeholder={`Olá {nome}! 👋\n\nTemos uma oferta especial para você...\n\nResponda esse mensagem para saber mais!`}
             />
-            <p className="text-xs text-muted-foreground mt-2">{form.messageTemplate.length} caracteres</p>
+            <p className="text-xs text-muted-foreground">{form.messageTemplate.length} / 1024 caracteres</p>
           </div>
         )}
 
@@ -203,6 +260,96 @@ export default function CampaignNewPage() {
           </button>
         )}
       </div>
+
+      {/* AI Template Generator Modal */}
+      {showAI && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-violet-600" />
+                <h2 className="font-bold text-lg">Gerar Template com IA</h2>
+              </div>
+              <button onClick={() => { setShowAI(false); setAiResult(null); setAiBase(''); }} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Descreva sua mensagem base</label>
+                <p className="text-xs text-muted-foreground mb-2">Explique o produto/serviço, oferta e público-alvo. A IA criará um template aprovável pela Meta.</p>
+                <textarea
+                  value={aiBase}
+                  onChange={(e) => setAiBase(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 resize-none"
+                  rows={4}
+                  placeholder="Ex: Vendo curso de inglês online por R$ 97 com acesso vitalício. Quero atingir adultos que precisam aprender inglês para trabalho. Promoção válida só hoje."
+                />
+              </div>
+
+              <button
+                onClick={handleGenerateAI}
+                disabled={aiLoading || aiBase.trim().length < 10}
+                className="w-full flex items-center justify-center gap-2 bg-violet-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors disabled:opacity-50"
+              >
+                {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {aiLoading ? 'Gerando...' : 'Gerar Template'}
+              </button>
+
+              {aiResult && (
+                <div className="space-y-4 border-t pt-4">
+                  <p className="text-sm font-semibold text-violet-700">Template gerado ✓</p>
+
+                  <div className="space-y-3">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Body</p>
+                        <button onClick={() => handleCopy(aiResult.body)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {copied ? 'Copiado' : 'Copiar'}
+                        </button>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{aiResult.body}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{aiResult.body.length} / 1024 caracteres</p>
+                    </div>
+
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-1">Footer</p>
+                      <p className="text-sm text-muted-foreground">{aiResult.footer}</p>
+                    </div>
+
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-1">Botão CTA</p>
+                      <span className="inline-block bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-full font-medium">{aiResult.button}</span>
+                    </div>
+
+                    <div className="bg-violet-50 border border-violet-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-violet-700 mb-1">Justificativa da IA</p>
+                      <p className="text-xs text-violet-800">{aiResult.justification}</p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => { setAiResult(null); }}
+                        className="flex-1 border py-2 rounded-lg text-sm hover:bg-muted transition-colors"
+                      >
+                        Gerar novamente
+                      </button>
+                      <button
+                        onClick={handleUseTemplate}
+                        className="flex-1 bg-violet-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors"
+                      >
+                        Usar esta mensagem
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
