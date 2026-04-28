@@ -30,23 +30,31 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
 
   if (instances.length === 0) throw new Error('Nenhuma instância conectada disponível. Conecte uma instância primeiro.');
 
-  const contacts = campaign.contactList.contacts;
-  if (contacts.length === 0) throw new Error('Nenhum contato na lista');
+  // Reuse existing PENDING messages if they already exist (retry scenario)
+  let messages = await prisma.message.findMany({
+    where: { campaignId, status: 'PENDING' },
+    orderBy: { createdAt: 'asc' },
+  });
 
-  const messages = await prisma.$transaction(
-    contacts.map((contact, i) =>
-      prisma.message.create({
-        data: {
-          campaignId,
-          contactId: contact.id,
-          instanceId: instances[i % instances.length].id,
-          phone: contact.phone,
-          name: contact.name,
-          status: 'PENDING',
-        },
-      })
-    )
-  );
+  if (messages.length === 0) {
+    const contacts = campaign.contactList.contacts;
+    if (contacts.length === 0) throw new Error('Nenhum contato na lista');
+
+    messages = await prisma.$transaction(
+      contacts.map((contact, i) =>
+        prisma.message.create({
+          data: {
+            campaignId,
+            contactId: contact.id,
+            instanceId: instances[i % instances.length].id,
+            phone: contact.phone,
+            name: contact.name,
+            status: 'PENDING',
+          },
+        })
+      )
+    );
+  }
 
   const jobs: Array<{ name: string; data: SendJobData; opts: { delay: number } }> = [];
 

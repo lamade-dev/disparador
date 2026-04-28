@@ -81,6 +81,8 @@ export default function CampaignDetailPage() {
     try {
       await api.patch(`/campaigns/${id}/${action}`);
       await load();
+    } catch (err: any) {
+      alert(err.response?.data?.error ?? `Erro ao executar ação: ${action}`);
     } finally {
       setActionLoading(false);
     }
