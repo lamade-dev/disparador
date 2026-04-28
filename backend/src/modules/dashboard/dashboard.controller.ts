@@ -14,6 +14,7 @@ export async function getStats(req: Request, res: Response) {
         status: true,
         sentCount: true,
         deliveredCount: true,
+        readCount: true,
         repliedCount: true,
         positiveCount: true,
         createdAt: true,
@@ -33,10 +34,11 @@ export async function getStats(req: Request, res: Response) {
     (acc, c) => ({
       sent: acc.sent + c.sentCount,
       delivered: acc.delivered + c.deliveredCount,
+      read: acc.read + c.readCount,
       replied: acc.replied + c.repliedCount,
       positive: acc.positive + c.positiveCount,
     }),
-    { sent: 0, delivered: 0, replied: 0, positive: 0 }
+    { sent: 0, delivered: 0, read: 0, replied: 0, positive: 0 }
   );
 
   // For master: build per-gestor breakdown
@@ -46,11 +48,12 @@ export async function getStats(req: Request, res: Response) {
     for (const c of campaigns) {
       const u = c.user;
       if (!byGestor.has(u.id)) {
-        byGestor.set(u.id, { id: u.id, name: u.name, email: u.email, sent: 0, delivered: 0, replied: 0, positive: 0, sessions: 0 });
+        byGestor.set(u.id, { id: u.id, name: u.name, email: u.email, sent: 0, delivered: 0, read: 0, replied: 0, positive: 0, sessions: 0 });
       }
       const g = byGestor.get(u.id)!;
       g.sent += c.sentCount;
       g.delivered += c.deliveredCount;
+      g.read += (c as any).readCount ?? 0;
       g.replied += c.repliedCount;
       g.positive += c.positiveCount;
       g.sessions += 1;

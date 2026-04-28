@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Send, CheckCheck, Reply, TrendingUp, Smartphone, Plus, RefreshCw } from 'lucide-react';
+import { Send, CheckCheck, BookOpen, Reply, TrendingUp, Smartphone, Plus, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
 import { formatDate, formatNumber } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
 
 interface Stats {
-  totals: { sent: number; delivered: number; replied: number; positive: number };
+  totals: { sent: number; delivered: number; read: number; replied: number; positive: number };
   campaigns: Array<{
     id: string; name: string; status: string;
     sentCount: number; deliveredCount: number; repliedCount: number; positiveCount: number;
@@ -56,6 +56,7 @@ export default function DashboardPage() {
   const statCards = [
     { label: 'Enviadas', value: totals.sent, icon: Send, color: 'text-blue-600 bg-blue-50' },
     { label: 'Entregues', value: totals.delivered, icon: CheckCheck, color: 'text-green-600 bg-green-50' },
+    { label: 'Lidas', value: totals.read, icon: BookOpen, color: 'text-cyan-600 bg-cyan-50' },
     { label: 'Respondidas', value: totals.replied, icon: Reply, color: 'text-purple-600 bg-purple-50' },
     { label: 'Leads Positivos', value: totals.positive, icon: TrendingUp, color: 'text-orange-600 bg-orange-50' },
   ];
@@ -73,7 +74,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((card) => (
           <div key={card.label} className="bg-card border rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">

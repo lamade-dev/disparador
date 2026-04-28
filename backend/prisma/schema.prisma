@@ -33,6 +33,7 @@ enum MessageStatus {
   PENDING
   SENT
   DELIVERED
+  READ
   FAILED
 }
 
@@ -125,6 +126,7 @@ model Campaign {
   messages        Message[]
   sentCount       Int            @default(0)
   deliveredCount  Int            @default(0)
+  readCount       Int            @default(0)
   repliedCount    Int            @default(0)
   positiveCount   Int            @default(0)
   startedAt       DateTime?
@@ -149,6 +151,7 @@ model Message {
   evolutionMsgId    String?
   sentAt            DateTime?
   deliveredAt       DateTime?
+  readAt            DateTime?
   responseText      String?
   responseSentiment ResponseSentiment?
   responseAt        DateTime?

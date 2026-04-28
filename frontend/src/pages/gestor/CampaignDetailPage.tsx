@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, XCircle, Send, CheckCheck, Reply, TrendingUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, Play, Pause, XCircle, Send, CheckCheck, BookOpen, Reply, TrendingUp, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
 import { formatDate, formatPhone, formatNumber } from '../../lib/utils';
@@ -13,7 +13,7 @@ interface Message {
 
 interface Campaign {
   id: string; name: string; status: string;
-  sentCount: number; deliveredCount: number; repliedCount: number; positiveCount: number;
+  sentCount: number; deliveredCount: number; readCount: number; repliedCount: number; positiveCount: number;
   messageTemplate: string; intervalMin: number; intervalMax: number; redirectNumber: string | null;
   contactList: { fileName: string; validCount: number };
   messages: Message[]; total: number; createdAt: string;
@@ -23,7 +23,12 @@ const msgStatusColor: Record<string, string> = {
   PENDING: 'text-gray-400',
   SENT: 'text-blue-500',
   DELIVERED: 'text-green-600',
+  READ: 'text-cyan-600',
   FAILED: 'text-red-500',
+};
+
+const msgStatusLabel: Record<string, string> = {
+  PENDING: 'Pendente', SENT: 'Enviada', DELIVERED: 'Entregue', READ: 'Lida', FAILED: 'Falhou',
 };
 
 const sentimentColor: Record<string, string> = {
@@ -124,10 +129,11 @@ export default function CampaignDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: 'Enviadas', value: campaign.sentCount, icon: Send, color: 'text-blue-600 bg-blue-50' },
           { label: 'Entregues', value: campaign.deliveredCount, icon: CheckCheck, color: 'text-green-600 bg-green-50' },
+          { label: 'Lidas', value: campaign.readCount, icon: BookOpen, color: 'text-cyan-600 bg-cyan-50' },
           { label: 'Respondidas', value: campaign.repliedCount, icon: Reply, color: 'text-purple-600 bg-purple-50' },
           { label: 'Positivos', value: campaign.positiveCount, icon: TrendingUp, color: 'text-orange-600 bg-orange-50' },
         ].map((card) => (
@@ -167,7 +173,7 @@ export default function CampaignDetailPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium text-sm">{msg.name ?? 'Sem nome'}</p>
                     <p className="text-xs text-muted-foreground">{formatPhone(msg.phone)}</p>
-                    <span className={`text-xs font-medium ${msgStatusColor[msg.status]}`}>{msg.status}</span>
+                    <span className={`text-xs font-medium ${msgStatusColor[msg.status]}`}>{msgStatusLabel[msg.status] ?? msg.status}</span>
                     {msg.responseSentiment && (
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sentimentColor[msg.responseSentiment]}`}>
                         {msg.responseSentiment}

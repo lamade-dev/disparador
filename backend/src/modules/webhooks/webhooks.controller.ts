@@ -88,26 +88,51 @@ async function handleMessagesUpdate(instanceName: string, data: any) {
     const evolutionMsgId = update.key?.id;
     if (!evolutionMsgId) continue;
 
-    const status = update.update?.status;
-    if (status !== 'DELIVERY_ACK' && status !== 3) continue;
+    const ackStatus = update.update?.status;
+
+    const isDelivered = ackStatus === 'DELIVERY_ACK' || ackStatus === 2 || ackStatus === 3;
+    const isRead = ackStatus === 'READ_ACK' || ackStatus === 4;
+
+    if (!isDelivered && !isRead) continue;
 
     const msg = await prisma.message.findFirst({ where: { evolutionMsgId } });
-    if (!msg || msg.status === 'DELIVERED') continue;
+    if (!msg) continue;
 
-    const updated = await prisma.message.update({
-      where: { id: msg.id },
-      data: { status: 'DELIVERED', deliveredAt: new Date() },
-    });
+    if (isRead && msg.status !== 'READ') {
+      const wasDelivered = msg.status === 'DELIVERED';
+      await prisma.message.update({
+        where: { id: msg.id },
+        data: {
+          status: 'READ',
+          readAt: new Date(),
+          deliveredAt: msg.deliveredAt ?? new Date(),
+        },
+      });
 
-    const campaign = await prisma.campaign.update({
-      where: { id: msg.campaignId },
-      data: { deliveredCount: { increment: 1 } },
-      select: { sentCount: true, deliveredCount: true, repliedCount: true, positiveCount: true, userId: true },
-    });
+      const campaign = await prisma.campaign.update({
+        where: { id: msg.campaignId },
+        data: {
+          readCount: { increment: 1 },
+          deliveredCount: wasDelivered ? undefined : { increment: 1 },
+        },
+        select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
+      });
 
-    getIO().to(`user:${campaign.userId}`).emit('campaign:stats', {
-      campaignId: msg.campaignId,
-      ...campaign,
-    });
+      getIO().to(`user:${campaign.userId}`).emit('campaign:stats', { campaignId: msg.campaignId, ...campaign });
+
+    } else if (isDelivered && msg.status === 'SENT') {
+      await prisma.message.update({
+        where: { id: msg.id },
+        data: { status: 'DELIVERED', deliveredAt: new Date() },
+      });
+
+      const campaign = await prisma.campaign.update({
+        where: { id: msg.campaignId },
+        data: { deliveredCount: { increment: 1 } },
+        select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
+      });
+
+      getIO().to(`user:${campaign.userId}`).emit('campaign:stats', { campaignId: msg.campaignId, ...campaign });
+    }
   }
 }
