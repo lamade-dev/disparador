@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../prisma/client';
 import { scheduleCampaign } from '../../services/queue/scheduler';
@@ -13,7 +13,11 @@ const createSchema = z.object({
   redirectNumber: z.string().optional(),
 });
 
-export async function listCampaigns(req: Request, res: Response) {
+function wrap(fn: (req: Request, res: Response) => Promise<void>) {
+  return (req: Request, res: Response, next: NextFunction) => fn(req, res).catch(next);
+}
+
+export const listCampaigns = wrap(async (req, res) => {
   const campaigns = await prisma.campaign.findMany({
     where: { userId: req.user!.sub },
     include: {
@@ -22,9 +26,9 @@ export async function listCampaigns(req: Request, res: Response) {
     orderBy: { createdAt: 'desc' },
   });
   res.json(campaigns);
-}
+});
 
-export async function createCampaign(req: Request, res: Response) {
+export const createCampaign = wrap(async (req, res) => {
   const data = createSchema.parse(req.body);
 
   const contactList = await prisma.contactList.findFirst({
@@ -45,9 +49,9 @@ export async function createCampaign(req: Request, res: Response) {
   });
 
   res.status(201).json(campaign);
-}
+});
 
-export async function getCampaign(req: Request, res: Response) {
+export const getCampaign = wrap(async (req, res) => {
   const id = req.params.id as string;
   const page = parseInt(String(req.query.page ?? '1'), 10);
   const limit = 50;
@@ -71,9 +75,9 @@ export async function getCampaign(req: Request, res: Response) {
   if (!campaign) { res.status(404).json({ error: 'Sessão não encontrada' }); return; }
 
   res.json({ ...campaign, messages, total, page, pages: Math.ceil(total / limit) });
-}
+});
 
-export async function startCampaign(req: Request, res: Response) {
+export const startCampaign = wrap(async (req, res) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub },
   });
@@ -90,9 +94,9 @@ export async function startCampaign(req: Request, res: Response) {
   }
 
   res.json({ status: 'RUNNING' });
-}
+});
 
-export async function pauseCampaign(req: Request, res: Response) {
+export const pauseCampaign = wrap(async (req, res) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub, status: 'RUNNING' },
   });
@@ -102,9 +106,9 @@ export async function pauseCampaign(req: Request, res: Response) {
   await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'PAUSED' } });
 
   res.json({ status: 'PAUSED' });
-}
+});
 
-export async function resumeCampaign(req: Request, res: Response) {
+export const resumeCampaign = wrap(async (req, res) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub, status: 'PAUSED' },
   });
@@ -114,9 +118,9 @@ export async function resumeCampaign(req: Request, res: Response) {
   await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'RUNNING' } });
 
   res.json({ status: 'RUNNING' });
-}
+});
 
-export async function cancelCampaign(req: Request, res: Response) {
+export const cancelCampaign = wrap(async (req, res) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id as string, userId: req.user!.sub },
   });
@@ -129,4 +133,4 @@ export async function cancelCampaign(req: Request, res: Response) {
   });
 
   res.json({ status: 'CANCELLED' });
-}
+});
