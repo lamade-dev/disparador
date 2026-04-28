@@ -38,7 +38,9 @@ io.on('connection', (socket) => {
 
 _io = io;
 
-app.use(cors({ origin: '*' }));
+const corsOptions = { origin: '*', methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', allowedHeaders: '*' };
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
