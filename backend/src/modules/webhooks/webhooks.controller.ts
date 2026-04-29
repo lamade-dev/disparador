@@ -8,22 +8,25 @@ export async function handleEvolutionWebhook(req: Request, res: Response) {
   res.status(200).send();
 
   const { event, instance: instanceName, data } = req.body;
+  const evt = (event ?? '').toLowerCase().replace(/_/g, '.');
 
-  console.log(`[Webhook] event=${event} instance=${instanceName}`);
+  console.log(`[Webhook] raw=${event} normalized=${evt} instance=${instanceName}`);
 
-  if (!event || !instanceName) return;
+  if (!evt || !instanceName) return;
 
   try {
-    if (event === 'connection.update') {
+    if (evt === 'connection.update') {
       await handleConnectionUpdate(instanceName, data);
-    } else if (event === 'messages.upsert') {
+    } else if (evt === 'messages.upsert') {
       await handleMessagesUpsert(instanceName, data);
-    } else if (event === 'messages.update') {
+    } else if (evt === 'messages.update') {
       console.log('[Webhook] messages.update data:', JSON.stringify(data).slice(0, 500));
       await handleMessagesUpdate(instanceName, data);
+    } else {
+      console.log(`[Webhook] unhandled event: ${evt}`);
     }
   } catch (err) {
-    console.error('[Webhook] Error processing event:', event, err);
+    console.error('[Webhook] Error processing event:', evt, err);
   }
 }
 
