@@ -62,6 +62,28 @@ export const evolution = {
     return msgId;
   },
 
+  async sendMedia(
+    instanceName: string,
+    phone: string,
+    mediaBase64: string,
+    mediaType: 'image' | 'video',
+    fileName: string,
+    caption: string,
+  ): Promise<string> {
+    const mimetype = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
+    const res = await client.post(`/message/sendMedia/${instanceName}`, {
+      number: phone,
+      mediatype: mediaType,
+      mimetype,
+      caption,
+      media: mediaBase64,
+      fileName,
+    });
+    const msgId = res.data?.key?.id ?? res.data?.id ?? '';
+    console.log(`[Evolution] sendMedia phone=${phone} type=${mediaType} msgId=${msgId}`);
+    return msgId;
+  },
+
   async disconnect(name: string): Promise<void> {
     await client.delete(`/instance/logout/${name}`);
   },

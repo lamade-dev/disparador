@@ -38,6 +38,9 @@ export type SendJobData = {
   name: string | null;
   template: string;
   redirectNumber: string | null;
+  mediaBase64?: string | null;
+  mediaType?: string | null;
+  mediaFileName?: string | null;
 };
 
 export type AnalysisJobData = {

@@ -11,7 +11,9 @@ export function startAnalysisWorker() {
     async (job: Job<AnalysisJobData>) => {
       const { messageId, campaignId, phone, name, responseText, redirectNumber, instanceName } = job.data;
 
+      console.log(`[AnalysisWorker] processing messageId=${messageId} phone=${phone} text="${responseText.slice(0, 50)}"`);
       const sentiment = await classifyResponse(responseText);
+      console.log(`[AnalysisWorker] sentiment=${sentiment} redirectNumber=${redirectNumber}`);
 
       await prisma.message.update({
         where: { id: messageId },
@@ -40,16 +42,22 @@ export function startAnalysisWorker() {
       });
 
       if (sentiment === 'POSITIVE' && redirectNumber) {
-        const notifyMsg = `🎯 *Lead Interessado!*\n\nNome: ${name || 'Desconhecido'}\nTelefone: ${phone}\n\nMensagem: "${responseText}"`;
+        // Normalize redirectNumber: remove +, spaces, dashes
+        const normalizedRedirect = redirectNumber.replace(/[\s+\-()]/g, '');
+        const notifyMsg = `🎯 *Lead Interessado!*\n\nNome: ${name || 'Desconhecido'}\nTelefone: +${phone}\n\nMensagem: "${responseText}"\n\n_Responda diretamente para esse contato no WhatsApp._`;
+        console.log(`[AnalysisWorker] notifying redirect=${normalizedRedirect} via instance=${instanceName}`);
         try {
-          await evolution.sendText(instanceName, redirectNumber, notifyMsg);
+          await evolution.sendText(instanceName, normalizedRedirect, notifyMsg);
           await prisma.message.update({
             where: { id: messageId },
             data: { notifiedAt: new Date() },
           });
+          console.log(`[AnalysisWorker] redirect notified successfully`);
         } catch (err) {
           console.error('[AnalysisWorker] Failed to notify redirect number:', err);
         }
+      } else if (sentiment === 'POSITIVE' && !redirectNumber) {
+        console.log(`[AnalysisWorker] POSITIVE but no redirectNumber configured for campaign ${campaignId}`);
       }
 
       const io = getIO();

@@ -8,6 +8,11 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
       contactList: { include: { contacts: true } },
     },
   });
+  // Fetch media separately to avoid huge base64 in the main query result
+  const campaignMedia = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { mediaBase64: true, mediaType: true, mediaFileName: true },
+  });
 
   const config = await prisma.dispatchConfig.findUnique({ where: { id: 'global' } });
 
@@ -75,6 +80,9 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
         name: msg.name,
         template: campaign.messageTemplate,
         redirectNumber: campaign.redirectNumber,
+        mediaBase64: campaignMedia?.mediaBase64,
+        mediaType: campaignMedia?.mediaType,
+        mediaFileName: campaignMedia?.mediaFileName,
       },
       opts: { delay },
     });

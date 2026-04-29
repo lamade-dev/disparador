@@ -9,8 +9,8 @@ export function startSendWorker() {
   const worker = new Worker<SendJobData>(
     'send-queue',
     async (job: Job<SendJobData>) => {
-      const { messageId, campaignId, instanceName, phone, name, template } = job.data;
-      console.log(`[SendWorker] processing job ${job.id} phone=${phone} messageId=${messageId}`);
+      const { messageId, campaignId, instanceName, phone, name, template, mediaBase64, mediaType, mediaFileName } = job.data;
+      console.log(`[SendWorker] processing job ${job.id} phone=${phone} messageId=${messageId} hasMedia=${!!mediaBase64}`);
 
       const variables: Record<string, string> = {};
       if (name) variables['nome'] = name;
@@ -20,7 +20,18 @@ export function startSendWorker() {
 
       let evolutionMsgId = '';
       try {
-        evolutionMsgId = await evolution.sendText(instanceName, phone, rewritten);
+        if (mediaBase64 && mediaType) {
+          evolutionMsgId = await evolution.sendMedia(
+            instanceName,
+            phone,
+            mediaBase64,
+            mediaType as 'image' | 'video',
+            mediaFileName ?? (mediaType === 'video' ? 'video.mp4' : 'image.jpg'),
+            rewritten,
+          );
+        } else {
+          evolutionMsgId = await evolution.sendText(instanceName, phone, rewritten);
+        }
       } catch (err: any) {
         if (err?.response?.status === 400 || err?.response?.status === 403) {
           await prisma.message.update({

@@ -11,6 +11,9 @@ const createSchema = z.object({
   intervalMin: z.number().int().min(5).max(600).default(15),
   intervalMax: z.number().int().min(5).max(600).default(45),
   redirectNumber: z.string().optional(),
+  mediaBase64: z.string().optional(),
+  mediaType: z.string().optional(),
+  mediaFileName: z.string().optional(),
 });
 
 function wrap(fn: (req: Request, res: Response) => Promise<void>) {
@@ -45,6 +48,9 @@ export const createCampaign = wrap(async (req, res) => {
       intervalMin: data.intervalMin,
       intervalMax: data.intervalMax,
       redirectNumber: data.redirectNumber,
+      mediaBase64: data.mediaBase64,
+      mediaType: data.mediaType,
+      mediaFileName: data.mediaFileName,
     },
   });
 

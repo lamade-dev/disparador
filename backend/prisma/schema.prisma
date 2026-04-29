@@ -122,6 +122,9 @@ model Campaign {
   intervalMin     Int            @default(15)
   intervalMax     Int            @default(45)
   redirectNumber  String?
+  mediaBase64     String?        @db.Text
+  mediaType       String?
+  mediaFileName   String?
   status          CampaignStatus @default(DRAFT)
   messages        Message[]
   sentCount       Int            @default(0)

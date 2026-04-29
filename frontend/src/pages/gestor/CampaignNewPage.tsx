@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, Loader2, CheckCircle, Sparkles, X, Copy, Check } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader2, CheckCircle, Sparkles, X, Copy, Check, ImagePlus, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface ContactList { id: string; fileName: string; validCount: number; }
@@ -16,11 +16,21 @@ interface GeneratedTemplate {
   justification: string;
 }
 
+interface MediaFile {
+  base64: string;
+  type: 'image' | 'video';
+  fileName: string;
+  sizeKB: number;
+}
+
+const MAX_SIZE_MB = 15;
+
 export default function CampaignNewPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [lists, setLists] = useState<ContactList[]>([]);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -30,6 +40,9 @@ export default function CampaignNewPage() {
     intervalMax: 45,
     redirectNumber: '',
   });
+
+  const [media, setMedia] = useState<MediaFile | null>(null);
+  const [mediaError, setMediaError] = useState('');
 
   // AI modal state
   const [showAI, setShowAI] = useState(false);
@@ -42,12 +55,50 @@ export default function CampaignNewPage() {
     api.get('/contacts').then((res) => setLists(res.data));
   }, []);
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setMediaError('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    if (!isImage && !isVideo) {
+      setMediaError('Formato inválido. Use imagem (JPG, PNG, GIF, WebP) ou vídeo (MP4).');
+      return;
+    }
+
+    const sizeMB = file.size / 1024 / 1024;
+    if (sizeMB > MAX_SIZE_MB) {
+      setMediaError(`Arquivo muito grande (${sizeMB.toFixed(1)} MB). Máximo: ${MAX_SIZE_MB} MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Strip the data:...;base64, prefix
+      const base64 = result.split(',')[1];
+      setMedia({
+        base64,
+        type: isVideo ? 'video' : 'image',
+        fileName: file.name,
+        sizeKB: Math.round(file.size / 1024),
+      });
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  }
+
   async function handleSubmit() {
     setSaving(true);
     try {
       const res = await api.post('/campaigns', {
         ...form,
         redirectNumber: form.redirectNumber || undefined,
+        mediaBase64: media?.base64 || undefined,
+        mediaType: media?.type || undefined,
+        mediaFileName: media?.fileName || undefined,
       });
       navigate(`/sessions/${res.data.id}`);
     } catch (err: any) {
@@ -153,29 +204,91 @@ export default function CampaignNewPage() {
         )}
 
         {step === 2 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium block">Mensagem da Sessão</label>
-                <p className="text-xs text-muted-foreground mt-0.5">Use {'{nome}'} e {'{telefone}'} para personalizar. A IA irá variar cada envio para evitar bloqueios.</p>
+          <div className="space-y-4">
+            {/* Texto da mensagem */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium block">Mensagem da Sessão</label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Use {'{nome}'} e {'{telefone}'} para personalizar.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAI(true)}
+                  className="flex items-center gap-1.5 bg-violet-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Gerar com IA
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAI(true)}
-                className="flex items-center gap-1.5 bg-violet-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors shrink-0"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Gerar com IA
-              </button>
+              <textarea
+                value={form.messageTemplate}
+                onChange={(e) => setForm((p) => ({ ...p, messageTemplate: e.target.value }))}
+                className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                rows={7}
+                placeholder={`Olá {nome}! 👋\n\nTemos uma oferta especial para você...\n\nResponda SIM para saber mais!`}
+              />
+              <p className="text-xs text-muted-foreground">{form.messageTemplate.length} / 1024 caracteres</p>
             </div>
-            <textarea
-              value={form.messageTemplate}
-              onChange={(e) => setForm((p) => ({ ...p, messageTemplate: e.target.value }))}
-              className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-              rows={8}
-              placeholder={`Olá {nome}! 👋\n\nTemos uma oferta especial para você...\n\nResponda esse mensagem para saber mais!`}
-            />
-            <p className="text-xs text-muted-foreground">{form.messageTemplate.length} / 1024 caracteres</p>
+
+            {/* Mídia (imagem ou vídeo) */}
+            <div className="border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Mídia <span className="text-muted-foreground font-normal">(opcional)</span></p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Imagem ou vídeo até {MAX_SIZE_MB} MB. A mensagem será usada como legenda.</p>
+                </div>
+                {!media && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    Adicionar
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {mediaError && (
+                <p className="text-xs text-red-500">{mediaError}</p>
+              )}
+
+              {media && (
+                <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                  {media.type === 'image' ? (
+                    <img
+                      src={`data:image/jpeg;base64,${media.base64}`}
+                      alt="preview"
+                      className="w-16 h-16 object-cover rounded-lg border"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-black/10 rounded-lg border flex items-center justify-center">
+                      <span className="text-2xl">🎬</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{media.fileName}</p>
+                    <p className="text-xs text-muted-foreground">{media.type === 'image' ? 'Imagem' : 'Vídeo'} · {media.sizeKB > 1024 ? `${(media.sizeKB / 1024).toFixed(1)} MB` : `${media.sizeKB} KB`}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMedia(null)}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-red-500"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -214,7 +327,7 @@ export default function CampaignNewPage() {
                 className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder="5511999999999"
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Este número receberá uma notificação quando um lead demonstrar interesse positivo.</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Quando um lead responder positivamente, este número receberá uma notificação no WhatsApp.</p>
             </div>
 
             <div className="bg-muted/50 rounded-xl p-4 space-y-2 text-sm">
@@ -223,6 +336,8 @@ export default function CampaignNewPage() {
                 <p>Lista: <b className="text-foreground">{lists.find((l) => l.id === form.contactListId)?.fileName}</b></p>
                 <p>Contatos: <b className="text-foreground">{lists.find((l) => l.id === form.contactListId)?.validCount ?? 0}</b></p>
                 <p>Intervalo: <b className="text-foreground">{form.intervalMin}–{form.intervalMax}s</b></p>
+                {media && <p>Mídia: <b className="text-foreground">{media.type === 'image' ? '🖼 Imagem' : '🎬 Vídeo'} · {media.fileName}</b></p>}
+                {form.redirectNumber && <p>Redirect: <b className="text-foreground">{form.redirectNumber}</b></p>}
                 <p className="text-xs">As instâncias serão definidas automaticamente pelo administrador.</p>
               </div>
             </div>
