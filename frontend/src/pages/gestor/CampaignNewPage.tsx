@@ -321,13 +321,20 @@ export default function CampaignNewPage() {
 
             <div>
               <label className="text-sm font-medium block mb-1.5">Número de Redirecionamento <span className="text-muted-foreground font-normal">(opcional)</span></label>
-              <input
-                value={form.redirectNumber}
-                onChange={(e) => setForm((p) => ({ ...p, redirectNumber: e.target.value }))}
-                className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="5511999999999"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">Quando um lead responder positivamente, este número receberá uma notificação no WhatsApp.</p>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 bg-muted text-sm text-muted-foreground">+55</span>
+                <input
+                  value={form.redirectNumber}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 13);
+                    setForm((p) => ({ ...p, redirectNumber: v }));
+                  }}
+                  className="flex-1 border rounded-r-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="11999999999"
+                  maxLength={13}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">Quando um lead responder positivamente, este número receberá uma notificação no WhatsApp. Digite com DDD, ex: <b>11999999999</b>.</p>
             </div>
 
             <div className="bg-muted/50 rounded-xl p-4 space-y-2 text-sm">

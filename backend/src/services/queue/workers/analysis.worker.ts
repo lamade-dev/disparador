@@ -42,8 +42,12 @@ export function startAnalysisWorker() {
       });
 
       if (sentiment === 'POSITIVE' && redirectNumber) {
-        // Normalize redirectNumber: remove +, spaces, dashes
-        const normalizedRedirect = redirectNumber.replace(/[\s+\-()]/g, '');
+        // Normalize redirectNumber: remove +, spaces, dashes, parens
+        let normalizedRedirect = redirectNumber.replace(/[\s+\-()\s]/g, '');
+        // Auto-add Brazil country code (55) if number has only DDD+number (10-11 digits)
+        if (normalizedRedirect.length <= 11 && !normalizedRedirect.startsWith('55')) {
+          normalizedRedirect = '55' + normalizedRedirect;
+        }
         const notifyMsg = `🎯 *Lead Interessado!*\n\nNome: ${name || 'Desconhecido'}\nTelefone: +${phone}\n\nMensagem: "${responseText}"\n\n_Responda diretamente para esse contato no WhatsApp._`;
         console.log(`[AnalysisWorker] notifying redirect=${normalizedRedirect} via instance=${instanceName}`);
         try {
