@@ -103,11 +103,15 @@ async function handleMessagesUpdate(instanceName: string, data: any) {
     if (!isDelivered && !isRead) continue;
 
     // Prefer direct DB ID lookup, fallback to evolutionMsgId
-    const msg = dbMessageId
-      ? await prisma.message.findUnique({ where: { id: dbMessageId } })
-      : evolutionMsgId
-        ? await prisma.message.findFirst({ where: { evolutionMsgId } })
-        : null;
+    let msg = null;
+    if (dbMessageId) {
+      msg = await prisma.message.findUnique({ where: { id: dbMessageId } });
+    }
+    if (!msg && evolutionMsgId) {
+      msg = await prisma.message.findFirst({ where: { evolutionMsgId } });
+    }
+
+    console.log(`[Webhook] lookup dbMessageId=${dbMessageId} evolutionMsgId=${evolutionMsgId} found=${!!msg} status=${ackStatus}`);
 
     if (!msg) continue;
 

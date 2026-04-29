@@ -15,9 +15,15 @@ Regras:
 
 export async function rewriteMessage(template: string, variables: Record<string, string> = {}): Promise<string> {
   let text = template;
+
+  // Replace {nome} / {telefone} style variables
   for (const [key, value] of Object.entries(variables)) {
     text = text.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
   }
+
+  // Replace Meta-style {{1}}, {{2}}... variables with actual values
+  const varArray = Object.values(variables);
+  text = text.replace(/\{\{(\d+)\}\}/g, (_, n) => varArray[parseInt(n) - 1] ?? '');
 
   try {
     const response = await openai.chat.completions.create({
