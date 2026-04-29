@@ -91,18 +91,24 @@ async function handleMessagesUpdate(instanceName: string, data: any) {
   const updates = Array.isArray(data) ? data : [data];
 
   for (const update of updates) {
-    const evolutionMsgId = update.key?.id;
-    if (!evolutionMsgId) continue;
+    // Evolution API v2 sends flat structure: { keyId, messageId, status, ... }
+    // Older format: { key: { id }, update: { status } }
+    const evolutionMsgId = update.keyId ?? update.key?.id;
+    const dbMessageId = update.messageId; // direct DB ID when available
+    const ackStatus = update.status ?? update.update?.status;
 
-    const ackStatus = update.update?.status;
-
-    // Baileys ACK: 2=DELIVERY_ACK, 3=READ_ACK (some Evolution builds send string or number)
     const isDelivered = ackStatus === 'DELIVERY_ACK' || ackStatus === 2;
-    const isRead = ackStatus === 'READ_ACK' || ackStatus === 'READ' || ackStatus === 3;
+    const isRead = ackStatus === 'READ' || ackStatus === 'READ_ACK' || ackStatus === 3;
 
     if (!isDelivered && !isRead) continue;
 
-    const msg = await prisma.message.findFirst({ where: { evolutionMsgId } });
+    // Prefer direct DB ID lookup, fallback to evolutionMsgId
+    const msg = dbMessageId
+      ? await prisma.message.findUnique({ where: { id: dbMessageId } })
+      : evolutionMsgId
+        ? await prisma.message.findFirst({ where: { evolutionMsgId } })
+        : null;
+
     if (!msg) continue;
 
     if (isRead && msg.status !== 'READ') {
