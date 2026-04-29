@@ -110,41 +110,44 @@ async function handleMessagesUpdate(instanceName: string, data: any) {
 
       if (!msg) continue;
 
-    if (isRead && msg.status !== 'READ') {
-      const wasDelivered = msg.status === 'DELIVERED';
-      await prisma.message.update({
-        where: { id: msg.id },
-        data: {
-          status: 'READ',
-          readAt: new Date(),
-          deliveredAt: msg.deliveredAt ?? new Date(),
-        },
-      });
+      if (isRead && msg.status !== 'READ') {
+        const wasDelivered = msg.status === 'DELIVERED';
+        await prisma.message.update({
+          where: { id: msg.id },
+          data: {
+            status: 'READ',
+            readAt: new Date(),
+            deliveredAt: msg.deliveredAt ?? new Date(),
+          },
+        });
 
-      const campaign = await prisma.campaign.update({
-        where: { id: msg.campaignId },
-        data: {
-          readCount: { increment: 1 },
-          deliveredCount: wasDelivered ? undefined : { increment: 1 },
-        },
-        select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
-      });
+        const campaign = await prisma.campaign.update({
+          where: { id: msg.campaignId },
+          data: {
+            readCount: { increment: 1 },
+            deliveredCount: wasDelivered ? undefined : { increment: 1 },
+          },
+          select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
+        });
 
-      getIO().to(`user:${campaign.userId}`).emit('campaign:stats', { campaignId: msg.campaignId, ...campaign });
+        getIO().to(`user:${campaign.userId}`).emit('campaign:stats', { campaignId: msg.campaignId, ...campaign });
 
-    } else if (isDelivered && msg.status === 'SENT') {
-      await prisma.message.update({
-        where: { id: msg.id },
-        data: { status: 'DELIVERED', deliveredAt: new Date() },
-      });
+      } else if (isDelivered && msg.status === 'SENT') {
+        await prisma.message.update({
+          where: { id: msg.id },
+          data: { status: 'DELIVERED', deliveredAt: new Date() },
+        });
 
-      const campaign = await prisma.campaign.update({
-        where: { id: msg.campaignId },
-        data: { deliveredCount: { increment: 1 } },
-        select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
-      });
+        const campaign = await prisma.campaign.update({
+          where: { id: msg.campaignId },
+          data: { deliveredCount: { increment: 1 } },
+          select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
+        });
 
-      getIO().to(`user:${campaign.userId}`).emit('campaign:stats', { campaignId: msg.campaignId, ...campaign });
+        getIO().to(`user:${campaign.userId}`).emit('campaign:stats', { campaignId: msg.campaignId, ...campaign });
+      }
+    } catch (err) {
+      console.error('[Webhook] Error processing update:', err);
     }
   }
 }
