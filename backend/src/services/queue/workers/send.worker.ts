@@ -35,12 +35,13 @@ export function startSendWorker() {
         throw err;
       }
 
+      console.log(`[SendWorker] saving evolutionMsgId="${evolutionMsgId}" for messageId=${messageId}`);
       await prisma.message.update({
         where: { id: messageId },
         data: {
           status: 'SENT',
           sentText: rewritten,
-          evolutionMsgId,
+          evolutionMsgId: evolutionMsgId || undefined,
           sentAt: new Date(),
         },
       });

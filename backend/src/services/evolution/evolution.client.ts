@@ -56,7 +56,10 @@ export const evolution = {
       number: phone,
       text,
     });
-    return res.data?.key?.id ?? '';
+    // Evolution API v2 may return key.id or just id at root level
+    const msgId = res.data?.key?.id ?? res.data?.id ?? '';
+    console.log(`[Evolution] sendText phone=${phone} msgId=${msgId} rawKeys=${Object.keys(res.data ?? {}).join(',')}`);
+    return msgId;
   },
 
   async disconnect(name: string): Promise<void> {
