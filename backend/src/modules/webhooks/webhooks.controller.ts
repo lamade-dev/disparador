@@ -66,7 +66,7 @@ async function handleMessagesUpsert(instanceName: string, data: any) {
     if (!text) continue;
 
     const existingMsg = await prisma.message.findFirst({
-      where: { phone, status: { in: ['SENT', 'DELIVERED'] } },
+      where: { phone, status: { in: ['SENT', 'DELIVERED', 'READ'] } },
       include: { campaign: { select: { redirectNumber: true, userId: true } } },
       orderBy: { sentAt: 'desc' },
     });

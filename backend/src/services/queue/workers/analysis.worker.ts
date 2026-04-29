@@ -13,13 +13,13 @@ export function startAnalysisWorker() {
 
       const sentiment = await classifyResponse(responseText);
 
-      const message = await prisma.message.update({
+      await prisma.message.update({
         where: { id: messageId },
         data: {
           responseText,
           responseSentiment: sentiment,
           responseAt: new Date(),
-          status: 'DELIVERED',
+          // Don't downgrade status — keep READ/DELIVERED as-is
         },
       });
 
@@ -32,6 +32,7 @@ export function startAnalysisWorker() {
         select: {
           sentCount: true,
           deliveredCount: true,
+          readCount: true,
           repliedCount: true,
           positiveCount: true,
           userId: true,
