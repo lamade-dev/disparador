@@ -91,29 +91,24 @@ async function handleMessagesUpdate(instanceName: string, data: any) {
   const updates = Array.isArray(data) ? data : [data];
 
   for (const update of updates) {
-    // Evolution API v2 sends flat structure: { keyId, messageId, status, ... }
-    // Older format: { key: { id }, update: { status } }
-    const evolutionMsgId = update.keyId ?? update.key?.id;
-    const dbMessageId = update.messageId; // direct DB ID when available
-    const ackStatus = update.status ?? update.update?.status;
+    try {
+      // Evolution API v2 flat: { keyId, status }  |  older: { key: { id }, update: { status } }
+      const evolutionMsgId: string | undefined = update.keyId ?? update.key?.id;
+      const ackStatus = update.status ?? update.update?.status;
 
-    const isDelivered = ackStatus === 'DELIVERY_ACK' || ackStatus === 2;
-    const isRead = ackStatus === 'READ' || ackStatus === 'READ_ACK' || ackStatus === 3;
+      const isDelivered = ackStatus === 'DELIVERY_ACK' || ackStatus === 2;
+      const isRead = ackStatus === 'READ' || ackStatus === 'READ_ACK' || ackStatus === 3;
 
-    if (!isDelivered && !isRead) continue;
+      console.log(`[Webhook] update: keyId=${evolutionMsgId} status=${ackStatus} isDelivered=${isDelivered} isRead=${isRead}`);
 
-    // Prefer direct DB ID lookup, fallback to evolutionMsgId
-    let msg = null;
-    if (dbMessageId) {
-      msg = await prisma.message.findUnique({ where: { id: dbMessageId } });
-    }
-    if (!msg && evolutionMsgId) {
-      msg = await prisma.message.findFirst({ where: { evolutionMsgId } });
-    }
+      if (!isDelivered && !isRead) continue;
+      if (!evolutionMsgId) continue;
 
-    console.log(`[Webhook] lookup dbMessageId=${dbMessageId} evolutionMsgId=${evolutionMsgId} found=${!!msg} status=${ackStatus}`);
+      const msg = await prisma.message.findFirst({ where: { evolutionMsgId } });
 
-    if (!msg) continue;
+      console.log(`[Webhook] msg found=${!!msg} msgId=${msg?.id} msgStatus=${msg?.status}`);
+
+      if (!msg) continue;
 
     if (isRead && msg.status !== 'READ') {
       const wasDelivered = msg.status === 'DELIVERED';
