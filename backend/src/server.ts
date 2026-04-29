@@ -66,6 +66,20 @@ httpServer.listen(PORT, async () => {
   startAnalysisWorker();
   console.log('⚙️  Workers started');
 
+  // Ensure send queue is not stuck in paused state from a previous session
+  try {
+    const { sendQueue } = await import('./services/queue/queue');
+    const isPaused = await sendQueue.isPaused();
+    if (isPaused) {
+      await sendQueue.resume();
+      console.log('▶️  Send queue was paused — resumed automatically');
+    } else {
+      console.log('▶️  Send queue is running');
+    }
+  } catch (e) {
+    console.warn('⚠️  Could not check/resume send queue:', e);
+  }
+
   // Auto-fix webhooks for all instances on startup
   try {
     const { prisma } = await import('./prisma/client');

@@ -80,10 +80,20 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
     });
   }
 
+  console.log(`[Scheduler] adding ${jobs.length} jobs to queue for campaign ${campaignId}`);
   await sendQueue.addBulk(jobs);
+
+  // Always resume the queue — it may be paused from a previous session
+  const isPaused = await sendQueue.isPaused();
+  if (isPaused) {
+    console.log('[Scheduler] queue was paused, resuming...');
+    await sendQueue.resume();
+  }
 
   await prisma.campaign.update({
     where: { id: campaignId },
     data: { status: 'RUNNING', startedAt: new Date() },
   });
+
+  console.log(`[Scheduler] campaign ${campaignId} scheduled and RUNNING`);
 }

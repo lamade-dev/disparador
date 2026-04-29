@@ -10,6 +10,7 @@ export function startSendWorker() {
     'send-queue',
     async (job: Job<SendJobData>) => {
       const { messageId, campaignId, instanceName, phone, name, template } = job.data;
+      console.log(`[SendWorker] processing job ${job.id} phone=${phone} messageId=${messageId}`);
 
       const variables: Record<string, string> = {};
       if (name) variables['nome'] = name;
