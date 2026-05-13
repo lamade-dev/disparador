@@ -85,7 +85,7 @@ httpServer.listen(PORT, async () => {
     const { prisma } = await import('./prisma/client');
     const { evolution } = await import('./services/evolution/evolution.client');
     const instances = await prisma.instance.findMany({ select: { name: true } });
-    const backendUrl = process.env.BACKEND_URL ?? 'https://disparador-disparador.kj2jgf.easypanel.host';
+    const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
     const webhookUrl = `${backendUrl}/api/webhooks/evolution`;
     for (const inst of instances) {
       try {

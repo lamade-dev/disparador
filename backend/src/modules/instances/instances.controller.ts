@@ -24,7 +24,7 @@ export async function createInstance(req: Request, res: Response) {
   const name = `inst_${req.user!.sub.slice(-6)}_${Date.now()}`;
 
   await evolution.createInstance(name);
-  const backendUrl = process.env.BACKEND_URL ?? `https://disparador-disparador.kj2jgf.easypanel.host`;
+  const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
   await evolution.setWebhook(name, `${backendUrl}/api/webhooks/evolution`);
 
   const instance = await prisma.instance.create({
@@ -80,7 +80,7 @@ export async function fixWebhook(req: Request, res: Response) {
   });
   if (!instance) { res.status(404).json({ error: 'Instância não encontrada' }); return; }
 
-  const backendUrl = process.env.BACKEND_URL ?? `https://disparador-disparador.kj2jgf.easypanel.host`;
+  const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
   const webhookUrl = `${backendUrl}/api/webhooks/evolution`;
   await evolution.setWebhook(instance.name, webhookUrl);
 
