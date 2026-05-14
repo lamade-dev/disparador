@@ -5,7 +5,7 @@ export async function getStats(req: Request, res: Response) {
   const isMaster = req.user!.role === 'MASTER';
   const where = isMaster ? {} : { userId: req.user!.sub };
 
-  const [campaigns, instances] = await Promise.all([
+  const [campaigns, instances, currentUser] = await Promise.all([
     prisma.campaign.findMany({
       where,
       select: {
@@ -27,6 +27,10 @@ export async function getStats(req: Request, res: Response) {
     prisma.instance.findMany({
       select: { id: true, displayName: true, status: true, phoneNumber: true },
       orderBy: { createdAt: 'desc' },
+    }),
+    prisma.user.findUnique({
+      where: { id: req.user!.sub },
+      select: { messageQuota: true, messagesUsed: true },
     }),
   ]);
 
@@ -61,5 +65,13 @@ export async function getStats(req: Request, res: Response) {
     gestorStats = Array.from(byGestor.values());
   }
 
-  res.json({ totals, campaigns, instances, gestorStats });
+  const quota = {
+    total: currentUser?.messageQuota ?? 0,
+    used: currentUser?.messagesUsed ?? 0,
+    available: (currentUser?.messageQuota ?? 0) > 0
+      ? (currentUser!.messageQuota - currentUser!.messagesUsed)
+      : null, // null means unlimited
+  };
+
+  res.json({ totals, campaigns, instances, gestorStats, quota });
 }

@@ -12,7 +12,7 @@ const createSchema = z.object({
 export async function listUsers(req: Request, res: Response) {
   const users = await prisma.user.findMany({
     where: { role: 'GESTOR', createdById: req.user!.sub },
-    select: { id: true, name: true, email: true, active: true, createdAt: true },
+    select: { id: true, name: true, email: true, active: true, messageQuota: true, messagesUsed: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
   });
   res.json(users);
@@ -36,7 +36,7 @@ export async function createUser(req: Request, res: Response) {
       role: 'GESTOR',
       createdById: req.user!.sub,
     },
-    select: { id: true, name: true, email: true, active: true, createdAt: true },
+    select: { id: true, name: true, email: true, active: true, messageQuota: true, messagesUsed: true, createdAt: true },
   });
 
   res.status(201).json(user);
@@ -49,7 +49,20 @@ export async function updateUser(req: Request, res: Response) {
   const user = await prisma.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, email: true, active: true },
+    select: { id: true, name: true, email: true, active: true, messageQuota: true, messagesUsed: true },
+  });
+
+  res.json(user);
+}
+
+export async function updateQuota(req: Request, res: Response) {
+  const id = req.params.id as string;
+  const { messageQuota } = z.object({ messageQuota: z.number().int().min(0) }).parse(req.body);
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: { messageQuota },
+    select: { id: true, name: true, email: true, active: true, messageQuota: true, messagesUsed: true },
   });
 
   res.json(user);

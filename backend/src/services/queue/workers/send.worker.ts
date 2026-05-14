@@ -64,6 +64,12 @@ export function startSendWorker() {
         select: { sentCount: true, deliveredCount: true, readCount: true, repliedCount: true, positiveCount: true, userId: true },
       });
 
+      // Increment messagesUsed for the campaign owner
+      await prisma.user.update({
+        where: { id: campaign.userId },
+        data: { messagesUsed: { increment: 1 } },
+      });
+
       const io = getIO();
       io.to(`user:${campaign.userId}`).emit('campaign:stats', {
         campaignId,

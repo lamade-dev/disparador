@@ -49,20 +49,22 @@ enum DispatchMode {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  password     String
-  role         Role          @default(GESTOR)
-  active       Boolean       @default(true)
-  createdById  String?
-  createdBy    User?         @relation("UserCreatedBy", fields: [createdById], references: [id])
-  createdUsers User[]        @relation("UserCreatedBy")
-  instances    Instance[]
-  campaigns    Campaign[]
-  contactLists ContactList[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  password       String
+  role           Role          @default(GESTOR)
+  active         Boolean       @default(true)
+  messageQuota   Int           @default(0)
+  messagesUsed   Int           @default(0)
+  createdById    String?
+  createdBy      User?         @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers   User[]        @relation("UserCreatedBy")
+  instances      Instance[]
+  campaigns      Campaign[]
+  contactLists   ContactList[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model Instance {

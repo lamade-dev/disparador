@@ -14,6 +14,16 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
     select: { mediaBase64: true, mediaType: true, mediaFileName: true },
   });
 
+  // Quota check: how many messages can still be sent by this user?
+  const owner = await prisma.user.findUniqueOrThrow({
+    where: { id: campaign.userId },
+    select: { messageQuota: true, messagesUsed: true },
+  });
+  const available = owner.messageQuota > 0 ? owner.messageQuota - owner.messagesUsed : Infinity;
+  if (available <= 0) {
+    throw new Error('Cota de disparos esgotada. Contate o administrador para aumentar sua cota.');
+  }
+
   const config = await prisma.dispatchConfig.findUnique({ where: { id: 'global' } });
 
   let instances: Array<{ id: string; name: string }>;
@@ -42,8 +52,13 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
   });
 
   if (messages.length === 0) {
-    const contacts = campaign.contactList.contacts;
-    if (contacts.length === 0) throw new Error('Nenhum contato na lista');
+    // Limit contacts to available quota
+    const allContacts = campaign.contactList.contacts;
+    if (allContacts.length === 0) throw new Error('Nenhum contato na lista');
+    const contacts = available === Infinity ? allContacts : allContacts.slice(0, available as number);
+    if (contacts.length < allContacts.length) {
+      console.log(`[Scheduler] quota limited contacts from ${allContacts.length} to ${contacts.length}`);
+    }
 
     messages = await prisma.$transaction(
       contacts.map((contact, i) =>

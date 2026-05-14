@@ -10,6 +10,12 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const registerSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
 export async function login(req: Request, res: Response) {
   const { email, password } = loginSchema.parse(req.body);
 
@@ -32,6 +38,30 @@ export async function login(req: Request, res: Response) {
   );
 
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+}
+
+export async function register(req: Request, res: Response) {
+  const { name, email, password } = registerSchema.parse(req.body);
+
+  const exists = await prisma.user.findUnique({ where: { email } });
+  if (exists) {
+    res.status(409).json({ error: 'Email já cadastrado' });
+    return;
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+  const user = await prisma.user.create({
+    data: { name, email, password: hashed, role: 'GESTOR' },
+    select: { id: true, name: true, email: true, role: true },
+  });
+
+  const token = jwt.sign(
+    { sub: user.id, email: user.email, role: user.role, name: user.name },
+    env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  res.status(201).json({ token, user });
 }
 
 export function me(req: Request, res: Response) {

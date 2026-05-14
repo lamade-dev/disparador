@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Send, CheckCheck, BookOpen, Reply, TrendingUp, Smartphone, Plus, RefreshCw } from 'lucide-react';
+import { Send, CheckCheck, BookOpen, Reply, TrendingUp, Smartphone, Plus, RefreshCw, Zap } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
 import { formatDate, formatNumber } from '../../lib/utils';
@@ -14,6 +14,7 @@ interface Stats {
     createdAt: string; contactList: { validCount: number };
   }>;
   instances: Array<{ id: string; displayName: string; status: string; phoneNumber: string | null }>;
+  quota: { total: number; used: number; available: number | null };
 }
 
 const campaignStatusColor: Record<string, string> = {
@@ -50,8 +51,9 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center h-64"><RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const { totals, campaigns, instances } = stats!;
+  const { totals, campaigns, instances, quota } = stats!;
   const connectedInstances = instances.filter((i) => i.status === 'CONNECTED');
+  const quotaUsedPct = quota?.total > 0 ? Math.min(100, Math.round((quota.used / quota.total) * 100)) : 0;
 
   const statCards = [
     { label: 'Enviadas', value: totals.sent, icon: Send, color: 'text-blue-600 bg-blue-50' },
@@ -87,6 +89,45 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Quota card */}
+      {quota && (
+        <div className="bg-card border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600">
+                <Zap className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Cota de Disparos</p>
+                <p className="text-xs text-muted-foreground">
+                  {quota.available === null
+                    ? 'Sem limite definido'
+                    : quota.available <= 0
+                    ? 'Cota esgotada — contate o administrador'
+                    : `${quota.available.toLocaleString()} disparos disponíveis`}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold">
+                {quota.available === null ? '∞' : quota.available.toLocaleString()}
+              </p>
+              {quota.total > 0 && (
+                <p className="text-xs text-muted-foreground">{quota.used.toLocaleString()} / {quota.total.toLocaleString()} usados</p>
+              )}
+            </div>
+          </div>
+          {quota.total > 0 && (
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${quotaUsedPct >= 90 ? 'bg-red-500' : quotaUsedPct >= 70 ? 'bg-yellow-500' : 'bg-violet-500'}`}
+                style={{ width: `${quotaUsedPct}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card border rounded-xl">
