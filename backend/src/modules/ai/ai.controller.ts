@@ -16,22 +16,24 @@ function wrap(fn: (req: Request, res: Response) => Promise<void>) {
 export const generateTemplate = wrap(async (req, res) => {
   const { baseMessage } = schema.parse(req.body);
 
-  const systemPrompt = `Você é um especialista em copywriting para WhatsApp Business API da Meta.
-Sua tarefa é criar um template de mensagem de MARKETING que:
+  const systemPrompt = `Você é um especialista em copywriting para WhatsApp Business.
+Sua tarefa é criar uma mensagem de MARKETING via WhatsApp que:
 - Converte leads qualificados em clientes pagantes
 - Usa tom de urgência real (estoque limitado ou prazo curto), sem exageros
-- Respeita TODAS as políticas da Meta
+- Estimula o lead a responder diretamente na conversa com uma palavra simples
 
 REGRAS OBRIGATÓRIAS:
 1. Máximo de 1024 caracteres no body
 2. Variáveis OBRIGATORIAMENTE no formato {{1}}, {{2}} — NUNCA [nome] ou {nome} ou %nome%
 3. {{1}} reservado para o nome do cliente no início do body
-4. Proibido links encurtados — usar URL completa como placeholder
+4. NÃO incluir links, URLs ou botões clicáveis
 5. Sem linguagem enganosa, promessas falsas ou spam
 6. Sem conteúdo proibido: drogas, armas, apostas, serviços adultos, retorno financeiro garantido
 7. Evitar excesso de maiúsculas e pontos de exclamação repetidos
 8. Footer obrigatório: "Para não receber mais mensagens, responda SAIR"
-9. Template deve ser aprovável pela Meta sem alterações
+9. O campo "button" NÃO é um link — é uma instrução de resposta que vai ao final da mensagem
+   Exemplo: "Responda essa mensagem com SIM que um dos nossos corretores vai entrar em contato com você 😊"
+   Adapte ao segmento do negócio, mas mantenha sempre a palavra SIM como gatilho de resposta
 
 Responda SOMENTE com um JSON válido no formato:
 {
@@ -39,7 +41,7 @@ Responda SOMENTE com um JSON válido no formato:
   "category": "Marketing",
   "body": "texto completo com variáveis {{1}}, {{2}}...",
   "footer": "Para não receber mais mensagens, responda SAIR",
-  "button": "texto CTA máx 25 chars",
+  "button": "instrução de resposta com SIM (1-2 linhas)",
   "justification": "2-3 linhas explicando as escolhas"
 }`;
 

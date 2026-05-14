@@ -1,8 +1,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Users, Trash2, FileSpreadsheet, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Upload, Users, Trash2, FileSpreadsheet, CheckCircle, XCircle, Loader2, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatDate, formatNumber } from '../../lib/utils';
+
+function downloadTemplate() {
+  const csv = [
+    'telefone,nome',
+    '11999999999,João Silva',
+    '21988888888,Maria Santos',
+    '31977777777,Carlos Oliveira',
+  ].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modelo_contatos.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface ContactList {
   id: string; fileName: string; totalRows: number;
@@ -58,9 +74,18 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Listas de Contatos</h1>
-        <p className="text-muted-foreground text-sm">Faça upload de planilhas Excel ou CSV com seus leads</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Listas de Contatos</h1>
+          <p className="text-muted-foreground text-sm">Faça upload de planilhas Excel ou CSV com seus leads</p>
+        </div>
+        <button
+          onClick={downloadTemplate}
+          className="flex items-center gap-2 border px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Baixar modelo de planilha
+        </button>
       </div>
 
       <div

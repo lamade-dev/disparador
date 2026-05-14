@@ -124,7 +124,7 @@ export default function CampaignNewPage() {
 
   function handleUseTemplate() {
     if (!aiResult) return;
-    const full = `${aiResult.body}\n\n${aiResult.footer}`;
+    const full = `${aiResult.body}\n\n${aiResult.button}\n\n${aiResult.footer}`;
     setForm((p) => ({ ...p, messageTemplate: full }));
     setShowAI(false);
     setAiResult(null);
@@ -406,7 +406,7 @@ export default function CampaignNewPage() {
                   onChange={(e) => setAiBase(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 resize-none"
                   rows={4}
-                  placeholder="Ex: Vendo curso de inglês online por R$ 97 com acesso vitalício. Quero atingir adultos que precisam aprender inglês para trabalho. Promoção válida só hoje."
+                  placeholder="Descreva seu produto ou serviço, o público-alvo e o objetivo da mensagem..."
                 />
               </div>
 
@@ -441,9 +441,9 @@ export default function CampaignNewPage() {
                       <p className="text-sm text-muted-foreground">{aiResult.footer}</p>
                     </div>
 
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-1">Botão CTA</p>
-                      <span className="inline-block bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-full font-medium">{aiResult.button}</span>
+                    <div className="bg-green-50 border border-green-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-1">Instrução de ação</p>
+                      <p className="text-sm text-green-800 font-medium">💬 {aiResult.button}</p>
                     </div>
 
                     <div className="bg-violet-50 border border-violet-100 rounded-lg p-3">
