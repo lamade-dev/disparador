@@ -11,7 +11,7 @@ const createSchema = z.object({
 
 export async function listUsers(req: Request, res: Response) {
   const users = await prisma.user.findMany({
-    where: { role: 'GESTOR', createdById: req.user!.sub },
+    where: { role: 'GESTOR' },
     select: { id: true, name: true, email: true, active: true, messageQuota: true, messagesUsed: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
   });
