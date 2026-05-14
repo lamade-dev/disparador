@@ -50,8 +50,13 @@ export async function register(req: Request, res: Response) {
   }
 
   const hashed = await bcrypt.hash(password, 10);
+
+  // Apply default quota from global settings
+  const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+  const defaultQuota = settings?.defaultMessageQuota ?? 0;
+
   const user = await prisma.user.create({
-    data: { name, email, password: hashed, role: 'GESTOR' },
+    data: { name, email, password: hashed, role: 'GESTOR', messageQuota: defaultQuota },
     select: { id: true, name: true, email: true, role: true },
   });
 

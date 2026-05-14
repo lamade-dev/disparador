@@ -8,6 +8,7 @@ import MasterInstancesPage from './pages/master/InstancesPage';
 import MasterReportPage from './pages/master/ReportPage';
 import MasterDispatchConfigPage from './pages/master/DispatchConfigPage';
 import GestorsPage from './pages/master/GestorsPage';
+import SettingsPage from './pages/master/SettingsPage';
 
 // Gestor pages
 import DashboardPage from './pages/gestor/DashboardPage';
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="instances" element={<ProtectedRoute allowedRoles={['MASTER']}><MasterInstancesPage /></ProtectedRoute>} />
           <Route path="dispatch-config" element={<ProtectedRoute allowedRoles={['MASTER']}><MasterDispatchConfigPage /></ProtectedRoute>} />
           <Route path="gestors" element={<ProtectedRoute allowedRoles={['MASTER']}><GestorsPage /></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute allowedRoles={['MASTER']}><SettingsPage /></ProtectedRoute>} />
 
           {/* Gestor routes */}
           <Route path="dashboard" element={<ProtectedRoute allowedRoles={['GESTOR']}><DashboardPage /></ProtectedRoute>} />

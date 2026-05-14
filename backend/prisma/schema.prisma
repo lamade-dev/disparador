@@ -86,6 +86,12 @@ model DispatchConfig {
   updatedAt          DateTime     @updatedAt
 }
 
+model Setting {
+  id                  String   @id @default("global")
+  defaultMessageQuota Int      @default(0)
+  updatedAt           DateTime @updatedAt
+}
+
 model ContactList {
   id           String     @id @default(cuid())
   userId       String

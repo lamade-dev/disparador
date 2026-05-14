@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, MessageSquare, LogOut, UserCog, BarChart3, Settings2 } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, MessageSquare, LogOut, UserCog, BarChart3, Settings2, SlidersHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { cn } from '../../lib/utils';
 
@@ -8,6 +8,7 @@ const masterNav = [
   { to: '/instances', icon: Smartphone, label: 'Instâncias' },
   { to: '/dispatch-config', icon: Settings2, label: 'Config. Disparo' },
   { to: '/gestors', icon: UserCog, label: 'Gestores' },
+  { to: '/settings', icon: SlidersHorizontal, label: 'Configurações' },
 ];
 
 const gestorNav = [
