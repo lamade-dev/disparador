@@ -5,12 +5,26 @@ import { rewriteMessage } from '../../ai/rewriter';
 import { SendJobData, analysisQueue, redisConnection } from '../queue';
 import { getIO } from '../../../server';
 
+// Prisma error code for "record not found"
+const PRISMA_NOT_FOUND = 'P2025';
+
 export function startSendWorker() {
   const worker = new Worker<SendJobData>(
     'send-queue',
     async (job: Job<SendJobData>) => {
       const { messageId, campaignId, instanceName, phone, name, template, mediaBase64, mediaType, mediaFileName } = job.data;
       console.log(`[SendWorker] processing job ${job.id} phone=${phone} messageId=${messageId} hasMedia=${!!mediaBase64}`);
+
+      // Guard: if the message no longer exists in DB (zombie job from old session), skip silently
+      const exists = await prisma.message.findUnique({ where: { id: messageId }, select: { id: true, status: true } });
+      if (!exists) {
+        console.warn(`[SendWorker] job ${job.id} skipped — messageId=${messageId} not found in DB (zombie job)`);
+        return;
+      }
+      if (exists.status !== 'PENDING') {
+        console.warn(`[SendWorker] job ${job.id} skipped — messageId=${messageId} already ${exists.status}`);
+        return;
+      }
 
       const variables: Record<string, string> = {};
       if (name) variables['nome'] = name;
@@ -33,30 +47,58 @@ export function startSendWorker() {
           evolutionMsgId = await evolution.sendText(instanceName, phone, rewritten);
         }
       } catch (err: any) {
-        if (err?.response?.status === 400 || err?.response?.status === 403) {
+        const status = err?.response?.status;
+
+        // 400/403: bad number or blocked — mark FAILED, no retry
+        if (status === 400 || status === 403) {
+          console.warn(`[SendWorker] job ${job.id} phone=${phone} rejected (${status}) — marking FAILED`);
           await prisma.message.update({
             where: { id: messageId },
             data: { status: 'FAILED', sentAt: new Date(), sentText: rewritten },
-          });
+          }).catch(() => {});
           await prisma.campaign.update({
             where: { id: campaignId },
             data: { sentCount: { increment: 1 } },
-          });
+          }).catch(() => {});
           return;
         }
+
+        // 500: instance likely disconnected/suspended — mark FAILED, no retry (retrying makes it worse)
+        if (status === 500) {
+          console.error(`[SendWorker] job ${job.id} Evolution API 500 — instance may be disconnected. Marking FAILED, no retry.`);
+          await prisma.message.update({
+            where: { id: messageId },
+            data: { status: 'FAILED', sentAt: new Date(), sentText: rewritten },
+          }).catch(() => {});
+          await prisma.campaign.update({
+            where: { id: campaignId },
+            data: { sentCount: { increment: 1 } },
+          }).catch(() => {});
+          return;
+        }
+
         throw err;
       }
 
       console.log(`[SendWorker] saving evolutionMsgId="${evolutionMsgId}" for messageId=${messageId}`);
-      await prisma.message.update({
-        where: { id: messageId },
-        data: {
-          status: 'SENT',
-          sentText: rewritten,
-          evolutionMsgId: evolutionMsgId || undefined,
-          sentAt: new Date(),
-        },
-      });
+
+      try {
+        await prisma.message.update({
+          where: { id: messageId },
+          data: {
+            status: 'SENT',
+            sentText: rewritten,
+            evolutionMsgId: evolutionMsgId || undefined,
+            sentAt: new Date(),
+          },
+        });
+      } catch (err: any) {
+        if (err?.code === PRISMA_NOT_FOUND) {
+          console.warn(`[SendWorker] message ${messageId} disappeared after send — skipping stats update`);
+          return;
+        }
+        throw err;
+      }
 
       const campaign = await prisma.campaign.update({
         where: { id: campaignId },
@@ -68,7 +110,7 @@ export function startSendWorker() {
       await prisma.user.update({
         where: { id: campaign.userId },
         data: { messagesUsed: { increment: 1 } },
-      });
+      }).catch(() => {});
 
       const io = getIO();
       io.to(`user:${campaign.userId}`).emit('campaign:stats', {

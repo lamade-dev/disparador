@@ -78,6 +78,13 @@ httpServer.listen(PORT, async () => {
     } else {
       console.log('▶️  Send queue is running');
     }
+
+    // Drain failed jobs from previous sessions (zombie jobs from old DB)
+    const failedJobs = await sendQueue.getFailed(0, 500);
+    if (failedJobs.length > 0) {
+      await Promise.all(failedJobs.map((j) => j.remove()));
+      console.log(`🧹 Cleaned ${failedJobs.length} failed zombie jobs from queue`);
+    }
   } catch (e) {
     console.warn('⚠️  Could not check/resume send queue:', e);
   }
