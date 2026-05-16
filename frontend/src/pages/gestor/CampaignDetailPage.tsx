@@ -1,9 +1,61 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, XCircle, Send, CheckCheck, BookOpen, Reply, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Play, Pause, XCircle, Send, CheckCheck, BookOpen, Reply, TrendingUp, Loader2, RefreshCw, Timer } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
 import { formatDate, formatPhone, formatNumber } from '../../lib/utils';
+
+function NextMessageCountdown({ intervalMin, intervalMax, running }: { intervalMin: number; intervalMax: number; running: boolean }) {
+  const [seconds, setSeconds] = useState(() =>
+    Math.floor(Math.random() * (intervalMax - intervalMin + 1)) + intervalMin
+  );
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const reset = useCallback(() => {
+    const next = Math.floor(Math.random() * (intervalMax - intervalMin + 1)) + intervalMin;
+    setSeconds(next);
+  }, [intervalMin, intervalMax]);
+
+  // Expose reset so parent can call it on each new send
+  useEffect(() => {
+    (window as any).__resetCountdown = reset;
+    return () => { delete (window as any).__resetCountdown; };
+  }, [reset]);
+
+  useEffect(() => {
+    if (!running) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
+    }
+    timerRef.current = setInterval(() => {
+      setSeconds((s) => {
+        if (s <= 1) { reset(); return intervalMax; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [running, reset, intervalMax]);
+
+  const pct = Math.round((seconds / intervalMax) * 100);
+  const color = seconds <= 5 ? 'text-orange-500' : 'text-primary';
+  const barColor = seconds <= 5 ? 'bg-orange-400' : 'bg-primary';
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className={`flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums ${color}`}>
+        <Timer className="w-5 h-5 shrink-0" />
+        {String(seconds).padStart(2, '0')}s
+      </div>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted-foreground shrink-0">{intervalMin}–{intervalMax}s</span>
+    </div>
+  );
+}
 
 interface Message {
   id: string; phone: string; name: string | null;
@@ -57,6 +109,8 @@ export default function CampaignDetailPage() {
     socket.on('campaign:stats', (data: any) => {
       if (data.campaignId === id) {
         setCampaign((prev) => prev ? { ...prev, ...data } : prev);
+        // Reset countdown on each new send event
+        (window as any).__resetCountdown?.();
       }
     });
     socket.on('campaign:message', (data: any) => {
@@ -163,14 +217,34 @@ export default function CampaignDetailPage() {
       </div>
 
       {(campaign.status === 'RUNNING' || campaign.status === 'PAUSED') && (
-        <div className="bg-card border rounded-xl p-4">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Progresso do envio</span>
-            <span className="font-medium">{formatNumber(campaign.sentCount)} / {formatNumber(campaign.contactList.validCount)} ({progress}%)</span>
+        <div className="bg-card border rounded-xl p-4 space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Progresso do envio</span>
+              <span className="font-medium">{formatNumber(campaign.sentCount)} / {formatNumber(campaign.contactList.validCount)} ({progress}%)</span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-          </div>
+
+          {campaign.status === 'RUNNING' && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Próximo disparo em</p>
+              <NextMessageCountdown
+                intervalMin={campaign.intervalMin}
+                intervalMax={campaign.intervalMax}
+                running={campaign.status === 'RUNNING'}
+              />
+            </div>
+          )}
+
+          {campaign.status === 'PAUSED' && (
+            <div className="flex items-center gap-2 text-yellow-600 text-sm">
+              <Pause className="w-4 h-4" />
+              <span>Sessão pausada — retome para continuar os disparos</span>
+            </div>
+          )}
         </div>
       )}
 
